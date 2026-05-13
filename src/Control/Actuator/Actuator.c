@@ -1,7 +1,7 @@
 #include "Actuator.h"
+#include <math.h>
 #include "Control/Ztransform/Ztransform.h"
 #include "utils/Exceptions_Assertions/assert.h"
-#include "utils/Exceptions_Assertions/except.h"
 #include "utils/MemAllocator/mem.h"
 
 const Except_t Actuator_Failed = {"Actuator faild"};
@@ -82,6 +82,8 @@ extern Actuator* Actuator_ctor(
         // that the actuator construction failed
         RAISE(Actuator_Failed);
     } END_TRY;
+    
+    return actuator;
 }
 
 /**
@@ -125,7 +127,7 @@ void Actuator_reset(Actuator* self){
  * 
  * @param self 
  */
- Actuator_dtor(Actuator* self){
+void Actuator_dtor(Actuator* self){
     if (!self) return;
 
     if (self->filter) ZFilter_dtor(self->filter);

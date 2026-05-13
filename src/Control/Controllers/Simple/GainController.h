@@ -1,7 +1,7 @@
 #ifndef GAIN_CONTROLLER_H_
 #define GAIN_CONTROLLER_H_
 
-#include "Controller.h"
+#include "Control/Controller/Controller.h"
 
 // Forward declaration of the GainController structure.
 typedef struct GainController GainController;

@@ -1,7 +1,7 @@
 #ifndef PID_CONTROLLER_H_
 #define PID_CONTROLLER_H_
 
-#include "Controller.h"
+#include "Control/Controller/Controller.h"
 
 // Forward declaration of the PIDController structure.
 typedef struct PIDController PIDController;

@@ -2,6 +2,7 @@
 #define CONTROL_ACTUATOR_H_
 
 #include <stdint.h>
+#include "utils/Exceptions_Assertions/except.h"
 
 extern const Except_t Actuator_Failed;
 
@@ -45,6 +46,6 @@ extern void Actuator_reset(Actuator* self);
  * 
  * @param self 
  */
-extern Actuator_dtor(Actuator* self);
+extern void Actuator_dtor(Actuator* self);
 
 #endif

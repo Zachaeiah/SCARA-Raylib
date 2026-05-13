@@ -1,5 +1,5 @@
 #include "PID_CONT.h"
-#include "Controller_private.h"
+#include "Control/Controller/Controller_private.h"
 #include "Control/Ztransform/Ztransform.h"
 
 #include "utils/Exceptions_Assertions/except.h"
@@ -7,11 +7,23 @@
 #include <stdint.h>
 #include <stdarg.h>
 
+/**
+ * @brief The PIDController structure, which extends the base Controller structure.
+ * 
+ * @param base The base Controller structure, which must be the first member of the PIDController structure.
+ * @param PID_filter A pointer to the ZFilter used for PID control.
+ */
 struct PIDController {
     Controller base;
     ZFilter* PID_filter;
 };
 
+/**
+ * @brief Constructor for the PIDController structure.
+ * 
+ * @param self A pointer to the Controller structure.
+ * @param args A pointer to the variable arguments list.
+ */
 static void PIDController_ctor(Controller* self, va_list* args)
 {
     PIDController* pid = (PIDController*)self;
@@ -22,16 +34,22 @@ static void PIDController_ctor(Controller* self, va_list* args)
     const float* a = va_arg(*args, const float*);
     uint32_t na = va_arg(*args, uint32_t);
 
-    /*
-        Do not catch here.
-
-        If ZFilter_ctor fails, let the exception propagate back to
-        Controller_create(), which should destroy the partially-created
-        controller.
-    */
+    /**
+     * @brief Constructor for the PIDController structure.
+     * 
+     * @param self A pointer to the Controller structure.
+     * @param args A pointer to the variable arguments list.
+     */
     pid->PID_filter = ZFilter_ctor(b, nb, a, na);
 }
 
+/**
+ * @brief Updates the PIDController with a new input value.
+ * 
+ * @param self A pointer to the Controller structure.
+ * @param x The new input value.
+ * @return The updated output value.
+ */
 static float PIDController_update(Controller* self, float x)
 {
     PIDController* pid = (PIDController*)self;
@@ -43,6 +61,11 @@ static float PIDController_update(Controller* self, float x)
     return ZFilter_update(pid->PID_filter, x);
 }
 
+/**
+ * @brief Resets the PIDController.
+ * 
+ * @param self A pointer to the Controller structure.
+ */
 static void PIDController_reset(Controller* self)
 {
     PIDController* pid = (PIDController*)self;
@@ -54,6 +77,11 @@ static void PIDController_reset(Controller* self)
     ZFilter_reset(pid->PID_filter);
 }
 
+/**
+ * @brief Destructor for the PIDController structure.
+ * 
+ * @param self A pointer to the Controller structure.
+ */
 static void PIDController_dtor(Controller* self)
 {
     PIDController* pid = (PIDController*)self;
@@ -66,6 +94,9 @@ static void PIDController_dtor(Controller* self)
     pid->PID_filter = NULL;
 }
 
+/**
+ * @brief The virtual table for the PIDController structure.
+ */
 static const ControllerVTable PIDController_VTable = {
     .ctor = PIDController_ctor,
     .update = PIDController_update,
@@ -73,6 +104,9 @@ static const ControllerVTable PIDController_VTable = {
     .dtor = PIDController_dtor
 };
 
+/**
+ * @brief The type information for the PIDController structure.
+ */
 const ControllerType PIDController_Type = {
     .size = sizeof(PIDController),
     .vtable = &PIDController_VTable

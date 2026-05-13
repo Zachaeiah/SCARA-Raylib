@@ -1,48 +1,44 @@
-/*******************************************************************************************
-*
-*   raylib [core] example - Basic 3d example
-*
-*   Welcome to raylib!
-*
-*   To compile example, just press F5.
-*   Note that compiled executable is placed in the same folder as .c file
-*
-*   You can find all basic examples on C:\raylib\raylib\examples folder or
-*   raylib official webpage: www.raylib.com
-*
-*   Enjoy using raylib. :)
-*
-*   This example has been created using raylib 1.0 (www.raylib.com)
-*   raylib is licensed under an unmodified zlib/libpng license (View raylib.h for details)
-*
-*   Copyright (c) 2013-2024 Ramon Santamaria (@raysan5)
-*
-********************************************************************************************/
-
 #include "raylib.h"
+#include <math.h>
+#include <stdint.h>
 
-//----------------------------------------------------------------------------------
-// Local Variables Definition (local to this module)
-//----------------------------------------------------------------------------------
-Camera camera = { 0 };
-Vector3 cubePosition = { 0 };
+// ---------------------------------------------------------
+// Timing
+// ---------------------------------------------------------
+#define SCREEN_WIDTH  800
+#define SCREEN_HEIGHT 450
 
-//----------------------------------------------------------------------------------
-// Local Functions Declaration
-//----------------------------------------------------------------------------------
-static void UpdateDrawFrame(void);          // Update and draw one frame
+#define RENDER_HZ 60.0
+#define PID_HZ    1000.0
 
-//----------------------------------------------------------------------------------
-// Main entry point
-//----------------------------------------------------------------------------------
-int main()
+#define RENDER_DT (1.0 / RENDER_HZ)
+#define PID_DT    (1.0 / PID_HZ)
+
+#define MAX_PID_STEPS_PER_LOOP 5
+
+// ---------------------------------------------------------
+// Globals
+// ---------------------------------------------------------
+static Camera camera = { 0 };
+
+static double pid_time = 0.0;
+static uint64_t pid_count = 0;
+
+static Vector3 cubePosition = { 0 };
+
+// ---------------------------------------------------------
+// Functions
+// ---------------------------------------------------------
+static void PID_Update(double dt);
+static void Other_IdleTasks(void);
+static void UpdateDrawFrame(void);
+
+// ---------------------------------------------------------
+// Main
+// ---------------------------------------------------------
+int main(void)
 {
-    // Initialization
-    //--------------------------------------------------------------------------------------
-    const int screenWidth = 800;
-    const int screenHeight = 450;
-
-    InitWindow(screenWidth, screenHeight, "raylib");
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "raylib simple scheduler");
 
     camera.position = (Vector3){ 10.0f, 10.0f, 8.0f };
     camera.target = (Vector3){ 0.0f, 0.0f, 0.0f };
@@ -50,34 +46,110 @@ int main()
     camera.fovy = 60.0f;
     camera.projection = CAMERA_PERSPECTIVE;
 
-    SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
-    //--------------------------------------------------------------------------------------
+    double now = GetTime();
 
-    // Main game loop
-    while (!WindowShouldClose())    // Detect window close button or ESC key
+    double next_pid_time = now;
+    double next_render_time = now;
+
+    while (!WindowShouldClose())
     {
-        UpdateDrawFrame();
+        now = GetTime();
+
+        bool did_work = false;
+
+        // -------------------------------------------------
+        // 1 kHz PID/control loop
+        // -------------------------------------------------
+        int pid_steps = 0;
+
+        while (now >= next_pid_time && pid_steps < MAX_PID_STEPS_PER_LOOP)
+        {
+            PID_Update(PID_DT);
+
+            next_pid_time += PID_DT;
+            pid_steps++;
+            did_work = true;
+        }
+
+        // If PID falls too far behind, resync instead of spiraling.
+        if (pid_steps >= MAX_PID_STEPS_PER_LOOP)
+        {
+            next_pid_time = now + PID_DT;
+        }
+
+        // -------------------------------------------------
+        // 60 FPS screen update/draw
+        // -------------------------------------------------
+        if (now >= next_render_time)
+        {
+            UpdateDrawFrame();
+
+            next_render_time += RENDER_DT;
+            did_work = true;
+
+            // If rendering falls behind, resync.
+            if (now > next_render_time + RENDER_DT)
+            {
+                next_render_time = now + RENDER_DT;
+            }
+        }
+
+        // -------------------------------------------------
+        // Low-priority tasks
+        // -------------------------------------------------
+        if (!did_work)
+        {
+            Other_IdleTasks();
+
+            // Give CPU a tiny break.
+            // This prevents the loop from burning 100% CPU.
+            WaitTime(0.0001);
+        }
     }
 
-
-    // De-Initialization
-    //--------------------------------------------------------------------------------------
-    CloseWindow();                  // Close window and OpenGL context
-    //--------------------------------------------------------------------------------------
+    CloseWindow();
 
     return 0;
 }
 
-// Update and draw game frame
+// ---------------------------------------------------------
+// Runs at 1 kHz
+// Put PID, control, simulation, path math, etc. here.
+// ---------------------------------------------------------
+static void PID_Update(double dt)
+{
+    pid_time += dt;
+    pid_count++;
+
+    // Example background math
+    cubePosition.y = 1.0f + 0.75f * sinf((float)(pid_time * 6.2831853));
+}
+
+// ---------------------------------------------------------
+// Runs only when PID and render are not due
+// Put low-priority background work here.
+// ---------------------------------------------------------
+static void Other_IdleTasks(void)
+{
+    // Examples:
+    // - process queued commands
+    // - update non-critical GUI state
+    // - logging
+    // - file checks
+    // - serial/network polling
+    //
+    // Keep this short.
+    // Do not block here.
+}
+
+// ---------------------------------------------------------
+// Runs at 60 FPS
+// Put raylib drawing here.
+// ---------------------------------------------------------
 static void UpdateDrawFrame(void)
 {
-    // Update
-    //----------------------------------------------------------------------------------
     UpdateCamera(&camera, CAMERA_ORBITAL);
-    //----------------------------------------------------------------------------------
 
-    // Draw
-    //----------------------------------------------------------------------------------
     BeginDrawing();
 
         ClearBackground(RAYWHITE);
@@ -90,10 +162,17 @@ static void UpdateDrawFrame(void)
 
         EndMode3D();
 
-        DrawText("This is a raylib example", 10, 40, 20, DARKGRAY);
+        DrawText("Simple scheduler", 10, 40, 20, DARKGRAY);
+        DrawText("Render: 60 FPS", 10, 70, 20, DARKGRAY);
+        DrawText("PID/control: 1 kHz", 10, 100, 20, DARKGRAY);
+
+        DrawText(TextFormat("PID updates: %llu", (unsigned long long)pid_count),
+                 10, 130, 20, DARKGRAY);
+
+        DrawText(TextFormat("PID time: %.3f s", pid_time),
+                 10, 160, 20, DARKGRAY);
 
         DrawFPS(10, 10);
 
     EndDrawing();
-    //----------------------------------------------------------------------------------
 }

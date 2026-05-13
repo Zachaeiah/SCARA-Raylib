@@ -1,5 +1,5 @@
 #include "GainController.h"
-#include "Controller_private.h"
+#include "Control/Controller/Controller_private.h"
 
 /**
  * @brief A simple gain controller that multiplies the input 
@@ -8,7 +8,6 @@
  */
 typedef struct GainController {
     Controller base;
-
     float k;
 } GainController;
 
@@ -17,12 +16,13 @@ typedef struct GainController {
  * gain factor k to a default value.
  * 
  * @param self A pointer to the controller instance to construct.
+ * @param args A pointer to the variable arguments list.
  */
-static void GainController_ctor(Controller* self)
+static void GainController_ctor(Controller* self, va_list* args)
 {
     GainController* gain = (GainController*)self;
 
-    gain->k = 2.0f;
+    gain->k = (float)va_arg(*args, double);
 }
 
 /**
@@ -46,9 +46,7 @@ static float GainController_update(Controller* self, float x)
  */
 static void GainController_reset(Controller* self)
 {
-    GainController* gain = (GainController*)self;
-
-    gain->k = 2.0f;
+    (void)self;
 }
 
 /**

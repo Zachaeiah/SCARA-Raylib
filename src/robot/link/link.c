@@ -22,7 +22,7 @@ static Link_protected* Link_protected_ctor()
         protected->O_frame = MatrixIdentity();
         protected->F_frame = MatrixIdentity();
 
-    } EXCEPT(Mem_Failed){
+    } EXCEPT(MemroyError){
         printf("Could not allocate Link: %s\n", Except_frame.exception->reason);
         if (protected) {
             FREE(protected);
