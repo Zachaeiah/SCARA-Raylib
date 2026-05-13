@@ -1,0 +1,71 @@
+# Build outputs
+build/
+bin/
+obj/
+out/
+output/
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.pdb
+*.ilk
+*.map
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+compile_commands.json
+
+# Raylib / generated resources
+raylib.rc.data
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Visual Studio
+.vs/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+
+# MinGW / Make
+*.d
+*.depend
+
+# Debug / logs
+*.log
+*.tmp
+*.bak
+*.swp
+
+# Python tools / scripts
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+
+# CSV / generated simulation data
+*.csv
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# OneDrive / temp files
+~$*
