@@ -33,13 +33,18 @@ extern ErrorType NO_ERROR; /**< Represents no error condition. */
  * @param error_buff Buffer to store the formatted error message. Must be writable and at least @p error_buff_size bytes. The buffer will be null-terminated.
  * @param error_buff_size Size of the @p error_buff buffer in bytes.
  * @param severity The severity level of the log message.
+ * @param file The name of the source file where the error occurred.
  * @param funcError The name of the function where the error occurred.
  * @param line The line number in the source code where the error occurred.
  * @param error The specific error code to format.
  * @param strError A format string describing the error (printf-style).
  * @param args Additional arguments to be formatted into strError, as required by the format string.
  */
-void formatError_v(char* error_buff, const uint32_t error_buff_size, const LogLevel severity, const char* funcError, const uint16_t line, const ErrorType error, const char* strError, va_list args);
+void formatError_v(char* error_buff, const uint32_t error_buff_size, 
+                    const LogLevel severity, const char* file, 
+                    const char* funcError, const uint16_t line, 
+                    const ErrorType error, const char* strError, 
+                    va_list args);
 
 /**
  * @brief Format a log message.
