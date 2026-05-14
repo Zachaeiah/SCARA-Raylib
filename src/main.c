@@ -2,6 +2,9 @@
 #include <math.h>
 #include <stdint.h>
 
+#include "utils/Logger/logger.h"
+#include "utils/Exceptions_Assertions/except.h"
+
 // ---------------------------------------------------------
 // Timing
 // ---------------------------------------------------------
@@ -38,6 +41,14 @@ static void UpdateDrawFrame(void);
 // ---------------------------------------------------------
 int main(void)
 {
+    if (Logger_init("Logs/log.txt") != 0) {
+       printf("Failed to initialize logger. Logging to stderr.\n");
+    }
+
+    LOG_MESSAGE("Program started");
+
+    LOG_WARN_MSG(12, "This is a warning message with no specific error code.");
+
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "raylib simple scheduler");
 
     camera.position = (Vector3){ 10.0f, 10.0f, 8.0f };
@@ -107,7 +118,10 @@ int main(void)
         }
     }
 
+    Logger_shutdown();
+
     CloseWindow();
+    
 
     return 0;
 }

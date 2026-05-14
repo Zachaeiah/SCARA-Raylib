@@ -1,73 +1,158 @@
-#include "logger.h"
+#include "utils/Logger/logger.h"
+
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <time.h>
+#include <string.h>
 
-#define MAX_ERROR_MESSAGE_LENGTH 512 /**< Maximum length of a formatted error message. */
+#define MAX_ERROR_MESSAGE_LENGTH 256 /**< Maximum length of a formatted error message. */
+
+FILE* flog = NULL;
+
+static int Logger_atexit_registered = 0;
+
+/**
+ * @brief Initialize the logger file.
+ *
+ * Opens the log file in append mode.
+ * If path is NULL or empty, "log.txt" is used.
+ *
+ * @param path Path to the log file.
+ * @return 0 on success, -1 on failure.
+ */
+int Logger_init(const char* path)
+{
+    const char* log_path = path;
+
+    // If no path provided, use default "log.txt"
+    if (log_path == NULL || log_path[0] == '\0') {
+        printf("No log file path provided. Using default: log.txt\n");
+        log_path = "log.txt";
+    }
+
+    // Close existing log file if open
+    if (flog != NULL && flog != stderr) {
+        printf("Closing existing log file before opening new one.\n");
+        fflush(flog);
+        fclose(flog);
+        flog = NULL;
+    }
+
+    // Attempt to open the log file in append mode
+    flog = fopen(log_path, "a");
+
+    if (flog == NULL) {
+        printf("Failed to open log file: %s. Logging to stderr.\n", log_path);
+        flog = stderr;
+        return -1;
+    }
+
+    // Set line buffering for the log file to ensure timely writes
+    setvbuf(flog, NULL, _IOLBF, 0);
+
+    // Register Logger_shutdown to be called at program exit, but only once.
+    if (!Logger_atexit_registered) {
+        printf("Registering Logger_shutdown to be called at program exit.\n");
+        atexit(Logger_shutdown);
+        Logger_atexit_registered = 1;
+    }
+
+
+    LOG_INFO_MSG(NO_ERROR, "Logger initialized with file: %s", log_path);
+
+    return 0;
+}
+
+/**
+ * @brief Close the logger file.
+ */
+void Logger_shutdown(void)
+{
+    if (!Logger_atexit_registered || flog == NULL) {
+        printf("Logger_shutdown called but Logger was never initialized. Nothing to do.\n");
+        return; // Logger was never initialized, nothing to do
+    }
+
+    // Log the shutdown message before closing the file, if it's not stderr.
+    if (flog != NULL && flog != stderr) {
+        LOG_INFO_MSG(NO_ERROR, "Logger shutting down");
+
+        // Flush and close the log file if it's not stderr.
+        fflush(flog);
+        fclose(flog);
+    }
+
+    flog = NULL;
+}
 
 /**
  * @brief Log a message with the specified severity level.
  * @param severity The severity level of the log message.
  * @param file The name of the source file where the log message is generated.
- * @param funcError The name of the function where the log message is generated.
+ * @param func The function name where the log message is generated.
  * @param line The line number in the source code where the log message is generated.
  * @param error The error code associated with the log message.
  * @param strError A format string describing the log message (printf-style).
  * @param ... Additional arguments to be formatted into strError, as required by the format string.
  */
-void Logger_log(LogLevel severity, const char* file, const char* funcError, uint16_t line, ErrorType error, const char* strError, ...)
+void Logger_log(int severity, const char* file, const char* func, const uint16_t line, ErrorType error, const char* strError, ...)
 {
-    char errorBuff[MAX_ERROR_MESSAGE_LENGTH]; // Buffer to hold the formatted error message
+    char consoleBuff[MAX_ERROR_MESSAGE_LENGTH];
+    char fileBuff[MAX_ERROR_MESSAGE_LENGTH];
 
-    va_list args; // Declare the variable argument list
-    va_start(args, strError); // Initialize the variable argument list
+    va_list consoleArgs;
+    va_list fileArgs;
 
-    if (severity == LOG_DEBUG || severity == LOG_INFO) {
-        // For debug and info messages, we can use a simpler format without error codes and location
-        formatMsg_v(errorBuff, sizeof(errorBuff), severity, strError, args);
-    } else {
-        // For warning, error, and critical messages, include error codes and location
-        formatError_v(errorBuff, sizeof(errorBuff), severity, file, funcError, line, error, strError, args);
+    if (flog == NULL) {
+        flog = stderr;
     }
 
-    va_end(args); // Clean up the variable argument list
 
-    dsprintf("%s", errorBuff); // Print the formatted error message to the console and log file
-}
+    va_start(consoleArgs, strError);
+    va_copy(fileArgs, consoleArgs);
 
-/**
- * @brief A helper function that formats a message and prints it to both the console and the log file.
- * 
- * @param fmt The format string (printf-style) for the message to be logged.
- * @param ... Additional arguments to be formatted into the message, as required by the format string.
- * @return int The number of characters printed, or a negative value if an error occurs.
- */
-int dsprintf(char const* fmt, ...)
-{
-// Declare the variable argument list
-   va_list args;
+    if (error == NO_ERROR && (severity == LOG_DEBUG || severity == LOG_INFO)) {
+        formatMsg_v(consoleBuff, sizeof(consoleBuff), severity,
+                    strError, consoleArgs);
 
-   // Variable to store the number of characters printed to the log file
-   int n1 = -1; 
+        formatMsgFile_v(fileBuff, sizeof(fileBuff), severity,
+                        strError, fileArgs);
+    } 
+    else 
+    {
+        formatError_v(consoleBuff, sizeof(consoleBuff),
+                      severity, file, func, line, error,
+                      strError, consoleArgs);
 
-   // Variable to store the number of characters printed to the console
-   int n2 = -1; 
+        formatErrorFile_v(fileBuff, sizeof(fileBuff),
+                          severity, file, func, line,
+                          error, strError, fileArgs);
+    }
 
-   // Print to log file if it's open
-   if (flog != NULL)
-   {
-      va_start(args, fmt);
-      n1 = vfprintf(flog, fmt, args);
-      va_end(args);
-   }
-   // Always print to console
-   va_start(args, fmt);
+    va_end(fileArgs);
+    va_end(consoleArgs);
 
-   // Print to console and get the number of characters printed
-   n2 = vfprintf(stdout, fmt, args);
+    /*
+        Console:
+        TraceLog already adds INFO:, WARNING:, ERROR:, etc.
+    */
+    TraceLog(severity, "%s", consoleBuff);
 
-   // Clean up the variable argument list
-   va_end(args);
+    /*
+        File:
+        fileBuff already contains timestamp and severity.
+    */
+    if (flog != NULL && flog != stderr) {
+        fprintf(flog, "%s", fileBuff);
 
-   if (n2 < n1) n1 = n2;
-   return n1;
+        size_t len = strlen(fileBuff);
+
+        if (len == 0 || fileBuff[len - 1] != '\n') {
+            fprintf(flog, "\n");
+        }
+
+        fflush(flog);
+    }
 }

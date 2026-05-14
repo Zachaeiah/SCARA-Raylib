@@ -5,30 +5,41 @@
 extern "C" {
 #endif
 
+#include <stdio.h>
+#include <stdint.h>
+
 #include "error_fmt.h"
+#include "raylib.h"
 
 extern FILE* flog; /**< File pointer for logging output. */
+
+/**
+ * @brief Initialize the logger file.
+ *
+ * Opens the log file in append mode.
+ * If path is NULL or empty, "log.txt" is used.
+ *
+ * @param path Path to the log file.
+ * @return 0 on success, -1 on failure.
+ */
+extern int Logger_init(const char* path);
+
+/**
+ * @brief Close the logger file.
+ */
+extern void Logger_shutdown(void);
 
 /**
  * @brief Log a message with the specified severity level.
  * @param severity The severity level of the log message.
  * @param file The name of the source file where the log message is generated.
- * @param funcError The name of the function where the log message is generated.
+ * @param func The function name where the log message is generated.
  * @param line The line number in the source code where the log message is generated.
  * @param error The error code associated with the log message.
  * @param strError A format string describing the log message (printf-style).
  * @param ... Additional arguments to be formatted into strError, as required by the format string.
  */
-void Logger_log(LogLevel severity, const char * file, const char* funcError, uint16_t line, ErrorType error, const char* strError, ...);
-
-/**
- * @brief A helper function that formats a message and prints it to both the console and the log file.
- * 
- * @param fmt The format string (printf-style) for the message to be logged.
- * @param ... Additional arguments to be formatted into the message, as required by the format string.
- * @return int The number of characters printed, or a negative value if an error occurs.
- */
-int dsprintf(char const* fmt, ...);
+extern void Logger_log(int severity, const char* file, const char* func, const uint16_t line, ErrorType error, const char* strError, ...);
 
 
 /**

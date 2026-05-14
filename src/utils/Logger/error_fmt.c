@@ -2,70 +2,213 @@
 #include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
+#include <time.h>
+#include "raylib.h"
 
-#define MAX_ERROR_MESSAGE_LENGTH 512 /**< Maximum length of a formatted error message. */
-#define FMT_ERROR "[%s] %s (Error Code: %d) at %s.%s: %d" /**< Format string for error messages. */
-#define FMT_MSG "[%s] %s" /**< Format string for general messages. */
+/*
+    Console format.
+
+    Do not include severity here because raylib TraceLog()
+    already prints INFO:, WARNING:, ERROR:, etc.
+*/
+#define FMT_ERROR_CMD "%s: %u (Error:%d) in function %s: %s"
+#define FMT_MSG_CMD   "%s"
+
+/*
+    File format.
+
+    Include timestamp and severity because fprintf()
+    does not add them automatically.
+*/
+#define FMT_ERROR_FILE "[%s] %s: %s: %u (Error:%d) in function %s: %s"
+#define FMT_MSG_FILE   "[%s] %s: %s"
+
+#define MAX_ERROR_MESSAGE_LENGTH 256 /**< Maximum length of a formatted error message. */
 
 ErrorType NO_ERROR = 0; /**< Represents no error condition. */
 
-/**
- * @brief Convert a log level enum to a string.
- *
- * @param level LogLevel to convert.
- * @return Human-readable string.
- * @ingroup Logger
- */
-static const char* levelToStr(LogLevel level) {
-  switch (level) {
-    case LOG_DEBUG: return "DEBUG";
-    case LOG_INFO: return "INFO";
-    case LOG_WARNING: return "WARNING";
-    case LOG_ERROR: return "ERROR";
-    default: return "UNKNOWN";
-  }
+static const char* severity_to_string(int severity)
+{
+    switch (severity) {
+        case LOG_TRACE:
+            return "TRACE";
+
+        case LOG_DEBUG:
+            return "DEBUG";
+
+        case LOG_INFO:
+            return "INFO";
+
+        case LOG_WARNING:
+            return "WARNING";
+
+        case LOG_ERROR:
+            return "ERROR";
+
+        case LOG_FATAL:
+            return "FATAL";
+
+        default:
+            return "UNKNOWN";
+    }
 }
 
-/**
- * @brief Format an error message based on the error type and log level.
- * 
- * @param error_buff Buffer to store the formatted error message. Must be writable and at least @p error_buff_size bytes. The buffer will be null-terminated.
- * @param error_buff_size Size of the @p error_buff buffer in bytes.
- * @param severity The severity level of the log message.
- * @param file The name of the source file where the error occurred.
- * @param funcError The name of the function where the error occurred.
- * @param line The line number in the source code where the error occurred.
- * @param error The specific error code to format.
- * @param strError A format string describing the error (printf-style).
- * @param args Additional arguments to be formatted into strError, as required by the format string.
- */
-void formatError_v(char* error_buff, const uint32_t error_buff_size, const LogLevel severity, const char* file, const char* funcError, const uint16_t line, const ErrorType error, const char* strError, va_list args)
+static void make_timestamp(char* buffer, size_t buffer_size)
 {
+    time_t now = time(NULL);
 
-  char userMsg[MAX_ERROR_MESSAGE_LENGTH]; // Buffer for the user-provided and final formatted message
+    if (now == (time_t)-1) {
+        snprintf(buffer, buffer_size, "unknown-time");
+        return;
+    }
 
-  // Format the user-provided message
-  vsnprintf(userMsg, sizeof(userMsg), strError, args);
+    struct tm* tm_info = localtime(&now);
 
-  // Combine all parts into the final error message
-  snprintf(error_buff, error_buff_size, FMT_ERROR, levelToStr(severity), userMsg, error, file, funcError, line);
+    if (tm_info == NULL) {
+        snprintf(buffer, buffer_size, "unknown-time");
+        return;
+    }
+
+    strftime(buffer, buffer_size, "%Y-%m-%d %H:%M:%S", tm_info);
 }
 
-/**
- * @brief Format a log message.
- * @param msg_buff Buffer to store the formatted message. Must be writable and at least @p msg_buff_size bytes. The buffer will be null-terminated.
- * @param msg_buff_size Size of the @p msg_buff buffer in bytes.
- * @param severity The severity level of the log message.
- * @param strMsg A format string for the message (printf-style).
- * @param args Additional arguments to be formatted into strMsg, as required by the format string.
- */
-void formatMsg_v(char* msg_buff, const uint32_t msg_buff_size, const LogLevel severity, const char* strMsg, va_list args)
+/*
+    Console error formatter.
+
+    Example output passed into TraceLog():
+
+        src/main.c: 50 (Error:12) in function main: This is a warning message
+
+    TraceLog() will print:
+
+        WARNING: src/main.c: 50 (Error:12) in function main: This is a warning message
+*/
+int formatError_v(char* error_buff,
+                  const uint32_t error_buff_size,
+                  const int severity,
+                  const char* file,
+                  const char* func,
+                  const uint16_t line,
+                  const ErrorType error,
+                  const char* strError,
+                  va_list args)
 {
-  char userMsg[MAX_ERROR_MESSAGE_LENGTH]; // Buffer for the user-provided and final formatted message
+    (void)severity;
 
-  // Format the user-provided message
-  vsnprintf(userMsg, sizeof(userMsg), strMsg, args);
+    char userMsg[MAX_ERROR_MESSAGE_LENGTH];
 
-  // Combine all parts into the final error message
-  snprintf(msg_buff, msg_buff_size, FMT_MSG, levelToStr(severity), userMsg);
+    if (strError == NULL) {
+        strError = "";
+    }
+
+    vsnprintf(userMsg, sizeof(userMsg), strError, args);
+
+    return snprintf(error_buff,
+                    error_buff_size,
+                    FMT_ERROR_CMD,
+                    file,
+                    (unsigned int)line,
+                    error,
+                    func,
+                    userMsg);
+}
+
+/*
+    Console normal message formatter.
+
+    Example output passed into TraceLog():
+
+        Program started
+
+    TraceLog() will print:
+
+        INFO: Program started
+*/
+int formatMsg_v(char* msg_buff,
+                const uint32_t msg_buff_size,
+                const int severity,
+                const char* strMsg,
+                va_list args)
+{
+    (void)severity;
+
+    char userMsg[MAX_ERROR_MESSAGE_LENGTH];
+
+    if (strMsg == NULL) {
+        strMsg = "";
+    }
+
+    vsnprintf(userMsg, sizeof(userMsg), strMsg, args);
+
+    return snprintf(msg_buff, msg_buff_size, FMT_MSG_CMD, userMsg);
+}
+
+/*
+    File error formatter.
+
+    Example file output:
+
+        [2026-05-14 10:52:30] WARNING: src/main.c: 50 (Error:12) in function main: This is a warning message
+*/
+int formatErrorFile_v(char* error_buff,
+                      const uint32_t error_buff_size,
+                      const int severity,
+                      const char* file,
+                      const char* func,
+                      const uint16_t line,
+                      const ErrorType error,
+                      const char* strError,
+                      va_list args)
+{
+    char timestamp[32];
+    char userMsg[MAX_ERROR_MESSAGE_LENGTH];
+
+    if (strError == NULL) {
+        strError = "";
+    }
+
+    make_timestamp(timestamp, sizeof(timestamp));
+    vsnprintf(userMsg, sizeof(userMsg), strError, args);
+
+    return snprintf(error_buff,
+                    error_buff_size,
+                    FMT_ERROR_FILE,
+                    timestamp,
+                    severity_to_string(severity),
+                    file,
+                    (unsigned int)line,
+                    error,
+                    func,
+                    userMsg);
+}
+
+/*
+    File normal message formatter.
+
+    Example file output:
+
+        [2026-05-14 10:52:30] INFO: Program started
+*/
+int formatMsgFile_v(char* msg_buff,
+                    const uint32_t msg_buff_size,
+                    const int severity,
+                    const char* strMsg,
+                    va_list args)
+{
+    char timestamp[32];
+    char userMsg[MAX_ERROR_MESSAGE_LENGTH];
+
+    if (strMsg == NULL) {
+        strMsg = "";
+    }
+
+    make_timestamp(timestamp, sizeof(timestamp));
+    vsnprintf(userMsg, sizeof(userMsg), strMsg, args);
+
+    return snprintf(msg_buff,
+                    msg_buff_size,
+                    FMT_MSG_FILE,
+                    timestamp,
+                    severity_to_string(severity),
+                    userMsg);
 }

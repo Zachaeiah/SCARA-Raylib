@@ -1,19 +1,35 @@
 //======================================================== Includes ===================================================
-#include <stdlib.h>
-#include <stdio.h>
-#include "assert.h"
 #include "except.h"
+
+#include <stdlib.h>
+#include <stdint.h>
+
+#include "assert.h"
+#include "utils/Logger/logger.h"
 
 #define T Except_t
 
-const T NullptrError =          {" Null Pointer "};
-const T ValueError =            {" Invaled Value was "};
-const T ZeroDivisionError =     {" Zero Division Deteted "};
-const T MemroyError =           {" Memory Allocation Failed "};
-const T NotImplementedError =   {" Method Not Implemented "};
+const T NullptrError        = { "Null pointer" };
+const T ValueError          = { "Invalid value" };
+const T ZeroDivisionError   = { "Zero division detected" };
+const T MemroyError         = { "Memory allocation failed" };
+const T NotImplementedError = { "Method not implemented" };
 
 //======================================================== Data =======================================================
 Except_Frame* Except_stack = NULL;   // Top of the exception stack
+
+static const char* Except_reason(const Except_t* e)
+{
+    if (e == NULL) {
+        return "(null exception)";
+    }
+
+    if (e->reason == NULL) {
+        return "(unknown exception)";
+    }
+
+    return e->reason;
+}
 
 //======================================================== Functions ==================================================
 /**
@@ -31,20 +47,11 @@ void Except_raise(const T* e, const char* file, int line) {
     assert(e);
 
     if (p == NULL) {
-        // No TRY block to handle this exception: uncaught exception
-        fprintf(stderr, "Uncaught exception");
-        if (e->reason) {
-            fprintf(stderr, ": %s", e->reason);
-        } else {
-            fprintf(stderr, " at 0x%p", (void*)e);
+        const char* reason = Except_reason(e);
+        LOG_ERROR_MSG(NO_ERROR, "%s",reason);
+
+        abort();
         }
-        if (file && line > 0) {
-            fprintf(stderr, " raised at %s:%d", file, line);
-        }
-        fprintf(stderr, "\nAborting...\n");
-        fflush(stderr);
-        abort();  // terminate program
-    }
 
     // Fill in exception frame info
     p->exception = e;
