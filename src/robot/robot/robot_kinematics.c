@@ -34,7 +34,9 @@ FK_result ROBOT_forward_kinematics(Robot* robot, Vector4 joint_angles){
     orientation = joint_angles.x + joint_angles.y + joint_angles.z;
 
     // compute the maximum reach of the robot by summing the lengths of the links
-    max_length = robot->protected->links[0]->dim.x + robot->protected->links[1]->dim.x + robot->protected->links[2]->dim.x;
+    for (int i = 0; i < NUM_LINKS; i++) {
+        max_length += robot->protected->links[i]->dim.x;
+    }
 
     // set the fk_sol struct with the computed position, orientation, and reachability
     fk_sol.position = pos;
@@ -48,7 +50,6 @@ FK_result ROBOT_forward_kinematics(Robot* robot, Vector4 joint_angles){
     } else {
         fk_sol.reachable = 0;
     }
-
 
     return fk_sol;
 

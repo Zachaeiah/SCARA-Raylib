@@ -35,4 +35,5 @@ extern FK_result ROBOT_forward_kinematics(Robot* robot, Vector4 joint_angles);
  */
 extern IK_result ROBOT_inverse_kinematics(Robot* robot, Vector3 target_position, float target_orientation);
 
+
 #endif // ROBOT_ROBOT_KINEMATICS_H_
