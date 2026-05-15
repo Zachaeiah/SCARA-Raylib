@@ -89,10 +89,11 @@ extern Actuator* Actuator_ctor(ZFilter* filter,
  * 
  * @param self pointer to the actuator instance
  * @param x input value to update the actuator with
+ * @return the output value after applying the ZFilter, dead zone, and saturation
  */
 float Actuator_update(Actuator* self, float x_in){
 
-    if (!self) return;
+    if (!self) return 0.0;
 
     // apply dead zone
     if (fabsf(x_in) < self->Dead_Zone) {
