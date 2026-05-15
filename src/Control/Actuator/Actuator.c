@@ -40,16 +40,14 @@ typedef struct Actuator{
 }Actuator;
 
 /**
- * @brief Constructs a new Actuator object with the given filter coefficients and limits
+ * @brief Constructs a new Actuator object with the given filter coefficients and limits.
  * 
- * @param filter pointer to the ZFilter coefficients
- * @param limts the limits for the actuator (dead zone and saturation)
- * @return Actuator* pointer to the newly created Actuator object
- * @note This function allocates memory for the Actuator and its ZFilter.
+ * @param filter pointer to the ZFilter
+ * @param Dead_Zone the dead zone limit
+ * @param Saturation the saturation limit
+ * @return Actuator* 
  */
-extern Actuator* Actuator_ctor(
-                        const float *b, uint32_t nb,
-                        const float *a, uint32_t na, 
+extern Actuator* Actuator_ctor(ZFilter* filter, 
                         float Dead_Zone, float Saturation)
 {
     Actuator* actuator = NULL;
@@ -61,7 +59,7 @@ extern Actuator* Actuator_ctor(
         NEW(actuator);
 
         // Create ZFilter for the actuator
-        actuator->filter = ZFilter_ctor(b, nb, a, na);
+        actuator->filter = filter;
         actuator->Dead_Zone = Dead_Zone;
         actuator->Saturation = Saturation;
 
@@ -92,20 +90,22 @@ extern Actuator* Actuator_ctor(
  * @param self pointer to the actuator instance
  * @param x input value to update the actuator with
  */
-void Actuator_update(Actuator* self, float x){
+float Actuator_update(Actuator* self, float x_in){
 
     if (!self) return;
 
     // apply dead zone
-    if (fabsf(x) < self->Dead_Zone) {
-        x = 0.0f;
+    if (fabsf(x_in) < self->Dead_Zone) {
+        x_in = 0.0f;
     }
 
     // update filter
-    float y = ZFilter_update(self->filter, x);
+    float y = ZFilter_update(self->filter, x_in);
 
     // apply saturation
     y = clampf(y, -self->Saturation, self->Saturation);
+
+    return y;
 
 }
 

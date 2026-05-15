@@ -1,7 +1,7 @@
 #include "PID_CONT.h"
 #include "Control/Controller/Controller_private.h"
 #include "Control/Ztransform/Ztransform.h"
-
+#include "utils/Logger/logger.h"
 #include "utils/Exceptions_Assertions/except.h"
 
 #include <stdint.h>

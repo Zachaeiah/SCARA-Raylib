@@ -11,25 +11,9 @@
 extern "C" {
 #endif
 
+#include "Control/Actuator/Actuator.h"
 #include "raylib.h"
 #include "raymath.h"
-
-
-//---------------------------- Program Definitions --------------------------------------------------
-#define LINK_VERSION_MAJOR   1
-#define LINK_VERSION_MINOR   0
-
-//---------------------------- Error Codes ----------------------------------------------------------
-typedef enum {
-    LINK_SUC = 0,
-    LINK_ERR,
-    LINK_ERR_ARG,
-} LINK_status_t;
-
-
-//---------------------------- Configuration Constants ----------------------------------------------
-// Add user-configurable constants here
-
 
 //---------------------------- Structure Definitions ------------------------------------------------
 typedef struct Link_protected Link_protected;
@@ -42,23 +26,33 @@ typedef struct Link
 
 } Link;
 
-//----------------------------- Globals -------------------------------------------------------------
-
 //----------------------------- Function Prototypes --------------------------------------------------
 
 /**
  * @brief will contructa link in the scara arm
  * 
- * @param self pointer to the link onj
  * @param dim the X:lenght Y: width Z:Hight
  * @param color the color of the link
- * @return LINK_status_t 
+ * @param actuator the actuator for the link
+ * @return Link* pointer to the constructed link instance
  */
-extern LINK_status_t LINK_ctor(Link* self, Vector3 dim, Color color);
+extern Link* LINK_ctor(Vector3 dim, Color color, Actuator* actuator);
 
-extern LINK_status_t LINK_update(Link* self, const double angle);
+/**
+ * @brief will update the link with a new angle input and return the speed output from the actuator
+ * 
+ * @param self pointer to the link instance
+ * @param x_in the input angle to update the link with
+ * @return float the output speed from the actuator after applying the input angle
+ */
+extern float LINK_update(Link* self, const float x_in);
 
-extern LINK_status_t LINK_dtor(Link* self);
+/**
+ * @brief will destruct the link and free all allocated memory
+ * 
+ * @param self pointer to the link instance
+ */
+extern void LINK_dtor(Link* self);
 
 
 #ifdef __cplusplus

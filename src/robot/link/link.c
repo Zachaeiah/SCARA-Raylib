@@ -1,6 +1,6 @@
 #include "Link.h"
 #include "link_protected.h"
-
+#include "Control/Actuator/Actuator.h"
 #include "utils/Exceptions_Assertions/assert.h"
 #include "utils/Exceptions_Assertions/except.h"
 #include "utils/MemAllocator/mem.h"
@@ -10,48 +10,62 @@
 
 //---------------------------- Structure Definitions ------------------------------------------------
 
-static Link_protected* Link_protected_ctor()
+static Link_protected* Link_protected_ctor(Actuator* actuator)
 {
     Link_protected* protected;
 
-    TRY{
-        printf("inside try");
-        
-        NEW(protected);
+    NEW0(protected);
 
-        protected->O_frame = MatrixIdentity();
-        protected->F_frame = MatrixIdentity();
-
-    } EXCEPT(MemroyError){
-        printf("Could not allocate Link: %s\n", Except_frame.exception->reason);
-        if (protected) {
-            FREE(protected);
-        }
-        protected = NULL;
-    } END_TRY;
+    protected->Start = Vector3Zero();
+    protected->End = Vector3Zero();
+    protected->angle = 0.0f;
+    protected->global_angle = 0.0f;
+    protected->actuator = actuator;
 
     return protected;
 }
 
 
-LINK_status_t LINK_ctor(Link* self, Vector3 dim, Color color)
+Link* LINK_ctor(Vector3 dim, Color color, Actuator* actuator)
 {
-    // TODO
-    self->protected = Link_protected_ctor();
-    self->protected->F_frame = MatrixTranslate(dim.x, 0, 0); // 
+    Link* self = NULL;
 
-    return LINK_SUC;
+    if (!actuator) {
+        RAISE(NullptrError);
+    }
+
+    if (FloatEquals(Vector3Length(dim), 0.001f)) {
+        RAISE(ValueError);
+    }
+    
+    NEW(self);
+    self->color = color;
+    self->dim = dim;
+    self->protected = Link_protected_ctor(actuator);
+    
+    return self;
 }
 
-LINK_status_t LINK_update(Link* self, const double angle)
+float LINK_update(Link* self, const float x_in)
 {
-    // TODO
-    return LINK_SUC;
+    if (!self) {
+        RAISE(NullptrError);
+    }
+
+    return Actuator_update(self->protected->actuator, x_in);
 }
-LINK_status_t LINK_dtor(Link* self)
+
+void LINK_dtor(Link* self)
 {
-    // TODO
-    return LINK_SUC;
+    if (!self) {
+        RAISE(NullptrError);
+    }
+
+    if (self->protected) {
+        FREE(self->protected);
+    }
+    FREE(self);
+    return;
 }
 
 

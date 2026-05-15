@@ -35,7 +35,7 @@ ZFilter* ZFilter_ctor(const float *b_in, uint32_t nb,
         RAISE(ZeroDivisionError);
 
     TRY {
-         NEW0(filter);
+        NEW0(filter);
 
         filter->nb = nb;
         filter->na = na;
