@@ -15,10 +15,10 @@ typedef enum Robot_modes{
 } Robot_mode;
 
 typedef struct Robot_state{
-    Vector3 position; // current position of the robot end effector
-    Vector4 angles; // current joint angles of the robot (in radians or cm)
-    Vector3 velocity; // current velocity of the robot end effector
-    float orientation; // current orientation of the robot end effector (in radians)
+    Vector3 TCP; // current position of the robot end effector
+    Vector3 TCP_velocity; // current velocity of the robot end effector
+    Vector3 JP; // current joint angles of the robot (in rads)
+    Vector3 JP_velocity; // current joint velocities of the robot (rads/s)
 } Robot_state;
 
 typedef struct Robot_protected{

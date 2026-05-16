@@ -8,11 +8,10 @@
 typedef struct Link_protected{
     Vector3 Start; // start frame matrix
     Vector3 End; // end frame matrix
-    float angle; // current angle of the link
-    float global_angle; // global angle of the link
+    float JP; // current angle of the link
     Actuator* actuator; // actuator for the link V
 }Link_protected;
 
 // the actuator will take in a "volatege" and output a "speed" that will be used to update the angle of the link
 
-#endif
+#endif // LINK_LINK_PROTECTED_H_
