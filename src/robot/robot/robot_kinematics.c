@@ -57,8 +57,8 @@ IK_result ROBOT_inverse_kinematics(Robot* robot, Vector3 target_TCP)
 {
 
     IK_result ik_sol = {
-        .JP = {{0.0f, 0.0f, 0.0f, 0.0f}},
-        .reachable = {0, 0}
+        .reachable = {0},
+        .JP = {{0}}
     };
 
     return ik_sol;

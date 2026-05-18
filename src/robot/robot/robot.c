@@ -9,7 +9,7 @@
 #define MIN_LIMIT_INDEX 0
 #define MAX_LIMIT_INDEX 1
 
-static inRangef(float value, float min, float max) {
+static int inRangef(float value, float min, float max) {
     return (value >= min) && (value <= max);
 }
 
@@ -124,7 +124,7 @@ void ROBOT_set_limits(Robot* self, float jp_limits[NUM_LINKS][2],
  * @param self pointer to the Robot instance
  * @param jp_setpoint the target joint angles as a Vector3
  */
-void ROBOT_set_angles(Robot* self, Vector3 jp_setpoint){
+void ROBOT_set_JP(Robot* self, Vector3 jp_setpoint){
 
     if (!self) {
         RAISE(NullptrError);
@@ -152,9 +152,70 @@ void ROBOT_set_angles(Robot* self, Vector3 jp_setpoint){
  * @brief Sets the velocity for the robot links.
  * 
  * @param self pointer to the Robot instance
+ * @param jp_velocity_setpoint the velocity setpoint for the robot link
+ */
+void ROBOT_set_JP_velocity(Robot* self, Vector3 jp_velocity_setpoint){
+    if (!self) {
+        RAISE(NullptrError);
+        return;
+    }
+
+    // check if the target velocity is within the link limits
+    if (inRangef(jp_velocity_setpoint.x, self->jp_velocity_limits[0][MIN_LIMIT_INDEX], self->jp_velocity_limits[0][MAX_LIMIT_INDEX]) && 
+        inRangef(jp_velocity_setpoint.y, self->jp_velocity_limits[1][MIN_LIMIT_INDEX], self->jp_velocity_limits[1][MAX_LIMIT_INDEX]) && 
+        inRangef(jp_velocity_setpoint.z, self->jp_velocity_limits[2][MIN_LIMIT_INDEX], self->jp_velocity_limits[2][MAX_LIMIT_INDEX])) {
+        // Velocity is within limits
+    } else {
+        RAISE(ValueError);
+        return;
+    }
+
+    // set control mode to velocity control
+    self->protected->mode = VELOCITY_CONTROL_MODE;
+
+    // set the target velocity in the protected data
+    self->protected->Target_state.JP_velocity = (Vector3){jp_velocity_setpoint.x, jp_velocity_setpoint.y, jp_velocity_setpoint.z};
+}
+
+/**
+ * @brief Sets the target position for the robot to reach.
+ * 
+ * @param self pointer to the Robot instance
+ * @param tcp_setpoint the target position as a Vector3
+ */
+void ROBOT_set_TCP_target(Robot* self, Vector3 tcp_setpoint){
+
+    if (!self) {
+        RAISE(NullptrError);
+        return;
+    }
+
+    // check if the target position is within the robot's reach
+    Vector3 jp_zero= Vector3Zero(); // dummy joint angles for fk_sol computation
+
+    FK_result fk_sol = ROBOT_forward_kinematics(self, jp_zero);
+
+    if (Vector3Length(tcp_setpoint) >= Vector3Length(fk_sol.TCP)) {
+        RAISE(ValueError);
+        return;
+    }
+
+    // set control mode to position control
+    self->protected->mode = POSITION_CONTROL_MODE;
+
+    // set the target position in the protected data
+    self->protected->Target_state.TCP = tcp_setpoint;
+    return;
+
+}
+
+/**
+ * @brief Sets the velocity for the robot links.
+ * 
+ * @param self pointer to the Robot instance
  * @param velocity_setpoint the velocity setpoint for the robot link
  */
-void ROBOT_set_TCPvelocity(Robot* self, Vector3 velocity_setpoint){
+void ROBOT_set_TCP_velocity(Robot* self, Vector3 velocity_setpoint){
 
     if (!self) {
         RAISE(NullptrError);
@@ -181,29 +242,25 @@ void ROBOT_set_TCPvelocity(Robot* self, Vector3 velocity_setpoint){
 }
 
 /**
- * @brief Sets the target position for the robot to reach.
+ * @brief Updates the robot state based on the current control mode and target state.
  * 
  * @param self pointer to the Robot instance
- * @param tcp_setpoint the target position as a Vector3
  */
-void ROBOT_set_TCPtarget(Robot* self, Vector3 tcp_setpoint){
+void ROBOT_update(Robot* self){
 
-    if (!self) {
+    // just for testing, will implement the actual control logic later
+     if (!self) {
         RAISE(NullptrError);
         return;
     }
 
-    // check if the target position is within the robot's reach
-    Vector3 jp_zero= Vector3Zero(); // dummy joint angles for fk_sol computation
+    // update the current state to match the target state for testing
+    self->protected->Current_state = self->protected->Target_state;
 
-    FK_result fk_sol = ROBOT_forward_kinematics(self, jp_zero);
-
-    if (Vector3Length(tcp_setpoint) >= Vector3Length(fk_sol.TCP)) {
-        RAISE(ValueError);
-        return;
-    }
-
-    return;
+    // update the joint angles of the links to match the target joint angles for testing
+    LINK_update(self->protected->links[0], self->protected->Target_state.JP.x);
+    LINK_update(self->protected->links[1], self->protected->Target_state.JP.y);
+    LINK_update(self->protected->links[2], self->protected->Target_state.JP.z);
 
 }
 
@@ -216,4 +273,44 @@ void ROBOT_set_TCPtarget(Robot* self, Vector3 tcp_setpoint){
  */
 void ROBOT_dtor(Robot* self){
 
+    if (!self) {
+        RAISE(NullptrError);
+        return;
+    }
+
+    // free the protected data
+    if (self->protected) {
+        FREE(self->protected);
+    }
+
+    // free the robot instance
+    FREE(self);
+
+}
+
+/**
+ * @brief Draws the robot using raylib.
+ * 
+ * @param self  pointer to the Robot instance
+ */
+void ROBOT_Draw(Robot* self){
+
+    if (!self) {
+        RAISE(NullptrError);
+        return;
+    }
+
+    // bace
+    LINK_Set_Start(self->protected->links[0], Vector3Zero()); // set the start position of the first link to the origin
+    Vector3 end = LINK_Draw(self->protected->links[0]); // draw the first link and get the end position
+
+    // link 1
+    LINK_Set_Start(self->protected->links[1], end); // set the start position of the second link to the end of the first link
+    end = LINK_Draw(self->protected->links[1]); // draw the second link and get the end position
+
+    // link 2
+    LINK_Set_Start(self->protected->links[2], end); // set the start position of the third link to the end of the second link
+    end = LINK_Draw(self->protected->links[2]); // draw the third link and get the end position
+
+    
 }

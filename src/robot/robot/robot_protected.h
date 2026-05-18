@@ -3,7 +3,7 @@
 #define ROBOT_PROTECTED_H_
 
 #include "Control/Controller/Controller.h"
-#include "link/link.h"
+#include "Robot/link/link.h"
 #include "raylib.h"
 #include "robot.h"
 

@@ -18,11 +18,13 @@ extern "C" {
 //---------------------------- Structure Definitions ------------------------------------------------
 typedef struct Link_protected Link_protected;
 
+
+
 typedef struct Link
 {
-    Color color;
-    Vector3 dim;
-    Link_protected* protected;
+    Color color; // color of the link
+    Vector3 dim; // x: length, y: width, z: height
+    Link_protected* protected; // pointer to the protected data for the link
 
 } Link;
 
@@ -48,11 +50,28 @@ extern Link* LINK_ctor(Vector3 dim, Color color, Actuator* actuator);
 extern float LINK_update(Link* self, const float x_in);
 
 /**
+ * @brief will draw the link using raylib
+ * 
+ * @param self pointer to the link instance
+ * @return Vector3 the position of the end of the link, which is used to draw the next link in the chain
+ */
+extern Vector3 LINK_Draw(Link* self);
+
+/**
+ * @brief will set the start position of the link, which is used to draw the link in the correct position
+ * 
+ * @param self pointer to the link instance
+ * @param start the start position of the link, which is used to draw the link in the correct position
+ */
+extern void LINK_Set_Start(Link* self, Vector3 start);
+
+/**
  * @brief will destruct the link and free all allocated memory
  * 
  * @param self pointer to the link instance
  */
 extern void LINK_dtor(Link* self);
+
 
 
 #ifdef __cplusplus

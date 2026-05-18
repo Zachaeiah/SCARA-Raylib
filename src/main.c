@@ -1,4 +1,6 @@
 #include "raylib.h"
+#include "raymath.h"
+#include "rlgl.h"
 #include <math.h>
 #include <stdint.h>
 
@@ -126,6 +128,58 @@ int main(void)
     return 0;
 }
 
+
+static Vector3 RotateAroundY(Vector3 v, float angleRad)
+{
+    float c = cosf(angleRad);
+    float s = sinf(angleRad);
+
+    return (Vector3){
+        .x = v.x*c + v.z*s,
+        .y = v.y,
+        .z = -v.x*s + v.z*c
+    };
+}
+
+static Vector3 DrawTestLink(Vector3 start, Vector3 dim, float angleRad, Color color)
+{
+    Vector3 localCenter = {
+        dim.x / 2.0f,
+        dim.y / 2.0f,
+        0.0f
+    };
+
+    Vector3 localEnd = {
+        dim.x,
+        dim.y,
+        0.0f
+    };
+
+    Vector3 end = Vector3Add(start, RotateAroundY(localEnd, angleRad));
+
+    rlPushMatrix();
+
+        rlTranslatef(start.x, start.y, start.z);
+
+        // Rotate around vertical Y axis
+        rlRotatef(angleRad * RAD2DEG, 0.0f, 1.0f, 0.0f);
+
+        // Move cube center relative to pivot
+        rlTranslatef(localCenter.x, localCenter.y, localCenter.z);
+
+        DrawCubeV(Vector3Zero(), dim, color);
+        DrawCubeWiresV(Vector3Zero(), dim, BLACK);
+
+    rlPopMatrix();
+
+    // Debug visuals
+    DrawSphere(start, 0.08f, RED);       // pivot/start joint
+    DrawSphere(end, 0.08f, BLUE);        // next joint/end
+    DrawLine3D(start, end, PURPLE);      // centerline
+
+    return end;
+}
+
 // ---------------------------------------------------------
 // Runs at 1 kHz
 // Put PID, control, simulation, path math, etc. here.
@@ -164,15 +218,43 @@ static void UpdateDrawFrame(void)
 {
     UpdateCamera(&camera, CAMERA_ORBITAL);
 
+    float t = (float)GetTime();
+
+    float joint1Angle = sinf(t * 1.0f) * 90.0f * DEG2RAD;
+    float joint2Angle = sinf(t * 1.7f) * 90.0f * DEG2RAD;
+
+    float link1AngleAbs = joint1Angle;
+    float link2AngleAbs = joint1Angle + joint2Angle;
+
+    Vector3 link1Start = { 1.0f, 0.0f, 0.0f };
+
+    Vector3 link0Dim = { 0.35f, 1.0f, 0.35f };
+    Vector3 link1Dim = { 4.0f, 0.35f, 0.35f };
+    Vector3 link2Dim = { 3.0f, 0.30f, 0.30f };
+
+    
+
     BeginDrawing();
 
         ClearBackground(RAYWHITE);
 
         BeginMode3D(camera);
 
-            DrawCube(cubePosition, 2.0f, 2.0f, 2.0f, RED);
-            DrawCubeWires(cubePosition, 2.0f, 2.0f, 2.0f, MAROON);
+            Vector3 origin = { 0.0f, 0.0f, 0.0f };
+            Vector3 x_axis = { 5.0f, 0.0f, 0.0f };
+            Vector3 y_axis = { 0.0f, 5.0f, 0.0f };
+            Vector3 z_axis = { 0.0f, 0.0f, 5.0f };
+
+            DrawLine3D(origin, x_axis, RED);
+            DrawLine3D(origin, y_axis, GREEN);
+            DrawLine3D(origin, z_axis, BLUE);
+
             DrawGrid(10, 1.0f);
+
+            Vector3 link1End = DrawTestLink(link1Start, link1Dim, link1AngleAbs, ORANGE);
+            Vector3 link2End = DrawTestLink(link1End, link2Dim, link2AngleAbs, SKYBLUE);
+
+            DrawSphere(link2End, 0.12f, GREEN); // end effector marker
 
         EndMode3D();
 
@@ -185,6 +267,7 @@ static void UpdateDrawFrame(void)
 
         DrawText(TextFormat("PID time: %.3f s", pid_time),
                  10, 160, 20, DARKGRAY);
+
 
         DrawFPS(10, 10);
 
