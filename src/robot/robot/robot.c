@@ -9,9 +9,57 @@
 #define MIN_LIMIT_INDEX 0
 #define MAX_LIMIT_INDEX 1
 
+#define ROBOT_UPDATE_HZ        1000.0f
+#define ROBOT_UPDATE_DT        (1.0f / ROBOT_UPDATE_HZ)
+
+#define ROBOT_POS_LOOP_HZ      100.0f
+#define ROBOT_POS_LOOP_DIVIDER 10
+
+#define J1_INDEX 0
+#define J2_INDEX 1
+#define J3_INDEX 2
+
 static int inRangef(float value, float min, float max) {
     return (value >= min) && (value <= max);
 }
+
+static float clampf(float value, float min, float max)
+{
+    if (value < min) return min;
+    if (value > max) return max;
+    return value;
+}
+
+static Vector3 Robot_Clamp_JP_Velocity(Robot* self, Vector3 v)
+{
+    v.x = clampf(v.x, self->jp_velocity_limits[J1_INDEX][MIN_LIMIT_INDEX],
+                      self->jp_velocity_limits[J1_INDEX][MAX_LIMIT_INDEX]);
+
+    v.y = clampf(v.y, self->jp_velocity_limits[J2_INDEX][MIN_LIMIT_INDEX],
+                      self->jp_velocity_limits[J2_INDEX][MAX_LIMIT_INDEX]);
+
+    v.z = clampf(v.z, self->jp_velocity_limits[J3_INDEX][MIN_LIMIT_INDEX],
+                      self->jp_velocity_limits[J3_INDEX][MAX_LIMIT_INDEX]);
+
+    return v;
+}
+
+static Vector3 Robot_Clamp_JP_Position(Robot* self, Vector3 jp)
+{
+    jp.x = clampf(jp.x, self->jp_limits[J1_INDEX][MIN_LIMIT_INDEX],
+                        self->jp_limits[J1_INDEX][MAX_LIMIT_INDEX]);
+
+    jp.y = clampf(jp.y, self->jp_limits[J2_INDEX][MIN_LIMIT_INDEX],
+                        self->jp_limits[J2_INDEX][MAX_LIMIT_INDEX]);
+
+    jp.z = clampf(jp.z, self->jp_limits[J3_INDEX][MIN_LIMIT_INDEX],
+                        self->jp_limits[J3_INDEX][MAX_LIMIT_INDEX]);
+
+    return jp;
+}
+
+void Robot_Velocity_Loop(Robot* self);
+void Robot_Position_Loop(Robot* self);
 
 
 /**
@@ -77,6 +125,9 @@ Robot* ROBOT_ctor(Controller* controllers[NUM_CTRLS], Link* links[NUM_LINKS]){
     // assign the controllers and links to the robot
     for (int i = 0; i < NUM_LINKS; i++) {
         protected->links[i] = links[i];
+    }
+
+    for (int i = 0; i < NUM_CTRLS; i++) {
         protected->controller[i] = controllers[i];
     }
 
@@ -138,14 +189,7 @@ void ROBOT_set_JP(Robot* self, Vector3 jp_setpoint){
         return;
     }
 
-    // check if the target angles are within the joint limits
-    FK_result fk_sol = ROBOT_forward_kinematics(self, jp_setpoint);
-
-    // if the target angles are not reachable, raise a ValueError
-    if (!fk_sol.reachable) {
-        RAISE(ValueError);
-        return;
-    }
+    Robot_Clamp_JP_Position(self, jp_setpoint);
 
     // set control mode to angle control
     self->protected->mode = Angle_CONTROL_MODE; 
@@ -168,14 +212,7 @@ void ROBOT_set_JP_velocity(Robot* self, Vector3 jp_velocity_setpoint){
     }
 
     // check if the target velocity is within the link limits
-    if (inRangef(jp_velocity_setpoint.x, self->jp_velocity_limits[0][MIN_LIMIT_INDEX], self->jp_velocity_limits[0][MAX_LIMIT_INDEX]) && 
-        inRangef(jp_velocity_setpoint.y, self->jp_velocity_limits[1][MIN_LIMIT_INDEX], self->jp_velocity_limits[1][MAX_LIMIT_INDEX]) && 
-        inRangef(jp_velocity_setpoint.z, self->jp_velocity_limits[2][MIN_LIMIT_INDEX], self->jp_velocity_limits[2][MAX_LIMIT_INDEX])) {
-        // Velocity is within limits
-    } else {
-        RAISE(ValueError);
-        return;
-    }
+    Robot_Clamp_JP_Velocity(self, jp_velocity_setpoint);
 
     // set control mode to velocity control
     self->protected->mode = VELOCITY_CONTROL_MODE;
@@ -229,24 +266,10 @@ void ROBOT_set_TCP_velocity(Robot* self, Vector3 velocity_setpoint){
         return;
     }
 
-    // check if the target velocity is within the link limits
-
-    if (inRangef(velocity_setpoint.x, self->jp_velocity_limits[0][MIN_LIMIT_INDEX], self->jp_velocity_limits[0][MAX_LIMIT_INDEX]) && 
-        inRangef(velocity_setpoint.y, self->jp_velocity_limits[1][MIN_LIMIT_INDEX], self->jp_velocity_limits[1][MAX_LIMIT_INDEX]) && 
-        inRangef(velocity_setpoint.z, self->jp_velocity_limits[2][MIN_LIMIT_INDEX], self->jp_velocity_limits[2][MAX_LIMIT_INDEX])) {
-        // Velocity is within limits
-    } else {
-        RAISE(ValueError);
-        return;
-    }
-
-    // set control mode to velocity control
-    self->protected->mode = VELOCITY_CONTROL_MODE;
-
-    // set the target velocity in the protected data
-    self->protected->Target_state.TCP_velocity = (Vector3){velocity_setpoint.x, velocity_setpoint.y, velocity_setpoint.z};
+    RAISE(ValueError);
     
 }
+
 
 /**
  * @brief Updates the robot state based on the current control mode and target state.
@@ -256,22 +279,21 @@ void ROBOT_set_TCP_velocity(Robot* self, Vector3 velocity_setpoint){
 void ROBOT_update(Robot* self){
 
     // just for testing, will implement the actual control logic later
-     if (!self) {
+    if (!self) {
         RAISE(NullptrError);
         return;
     }
 
-    // update the current state to match the target state for testing
-    self->protected->Current_state = self->protected->Target_state;
+    if (self->protected->tick_counter >= ROBOT_POS_LOOP_HZ){
+        Robot_Position_Loop(self);
+        self->protected->tick_counter = 0;
+    }
 
-    // update the joint angles of the links to match the target joint angles for testing
-    LINK_update(self->protected->links[0], self->protected->Target_state.JP.x);
-    LINK_update(self->protected->links[1], self->protected->Target_state.JP.y);
-    LINK_update(self->protected->links[2], self->protected->Target_state.JP.z);
+    Robot_Velocity_Loop(self);
+
+    self->protected->tick_counter++;
 
 }
-
-
 
 /**
  * @brief Destructs the Robot instance and frees all allocated memory.
@@ -340,4 +362,15 @@ void ROBOT_Draw(Robot* self)
     // link4: passive TCP/tool body
     LINK_Set_Start(link4, tcpStart);
     LINK_Draw(link4);
+}
+
+void Robot_Velocity_Loop(Robot* self){
+    
+
+
+}
+
+
+void Robot_Position_Loop(Robot* self){
+
 }

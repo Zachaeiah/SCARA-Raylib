@@ -7,6 +7,18 @@
 #include "raylib.h"
 #include "robot.h"
 
+typedef enum RobotControllerIndex {
+    CTRL_J1_POS = 0,
+    CTRL_J2_POS,
+    CTRL_J3_POS,
+
+    CTRL_J1_VEL,
+    CTRL_J2_VEL,
+    CTRL_J3_VEL,
+
+    NUM_CTRLS
+} RobotControllerIndex;
+
 typedef enum Robot_modes{
     IDLE_MODE, // robot is idle and not moving, stay in current position
     Angle_CONTROL_MODE, // robot is controlling the joint angles to reach a target position
@@ -27,6 +39,7 @@ typedef struct Robot_protected{
     Controller* controller[NUM_LINKS]; // pointer to the controller for the robot
     Robot_state Current_state; // current state of the robot
     Robot_state Target_state; // target state for the robot to reach
+    unsigned char tick_counter;
 } Robot_protected;
 
 

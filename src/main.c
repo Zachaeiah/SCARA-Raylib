@@ -19,11 +19,11 @@
 #define SCREEN_WIDTH  1600
 #define SCREEN_HEIGHT 900
 
-#define RENDER_HZ 480.0
-#define PID_HZ    1000.0
+#define RENDER_HZ 60.0f
+#define CTRL_FEQ    1000.0f
 
-#define RENDER_DT (1.0 / RENDER_HZ)
-#define PID_DT    (1.0 / PID_HZ)
+#define RENDER_DT (1.0f / RENDER_HZ)
+#define CTRL_DT    (1.0f / CTRL_FEQ)
 
 #define MAX_PID_STEPS_PER_LOOP 5
 
@@ -38,14 +38,22 @@ static Camera camera = { 0 };
 
 static Robot* SCARA;
 
-Controller* G_const1 = NULL;
-Controller* G_const2 = NULL;
-Controller* G_const3 = NULL;
+// actuator velocity controller
+Controller* G1_vel = NULL;
+Controller* G2_vel = NULL;
+Controller* G3_vel = NULL;
 
+// actuator posions controller
+Controller* G1_pos = NULL;
+Controller* G2_pos = NULL;
+Controller* G3_pos = NULL;
+
+// motor plands
 ZFilter* motor_plant1 = NULL;
 ZFilter* motor_plant2 = NULL;
 ZFilter* motor_plant3 = NULL;
 
+// actuator to control the plands
 Actuator* actuator1 = NULL;
 Actuator* actuator2 = NULL;
 Actuator* actuator3 = NULL;
@@ -58,9 +66,9 @@ Link* link4 = NULL;
 // ---------------------------------------------------------
 // Functions
 // ---------------------------------------------------------
-static void Control_Update(double dt);
-static void IdleTasks(void);
-static void UpdateDrawFrame(void);
+void Control_Update(void);
+void IdleTasks(void);
+void UpdateDrawFrame(void);
 
 // ---------------------------------------------------------
 // Main
@@ -71,11 +79,10 @@ int main(void)
        printf("Failed to initialize logger. Logging to stderr.\n");
     }
 
-    float Gain = 2.0f;
-
+    float Gain_vel = 2.0f;
+    float Gain_pos = 1.0f;
     float plant_b[] = { 1.0f };
     float plant_a[] = { 1.0f };
-
     float Dead_Zone = 0.0f, Saturation = 12.0f;
 
 
@@ -104,12 +111,17 @@ int main(void)
     // link4 is just the moving tool/end link
     link4 = LINK_ctor(link4Dim, ORANGE, TCP_LINK, NULL);
 
-    // setup simple P Controller for testing
-    G_const1 = Controller_create(&GainController_Type, Gain);
-    G_const2 = Controller_create(&GainController_Type, Gain);
-    G_const3 = Controller_create(&GainController_Type, Gain);
+    // P controller for actuator velocity
+    G1_vel = Controller_create(&GainController_Type, Gain_vel);
+    G2_vel = Controller_create(&GainController_Type, Gain_vel);
+    G3_vel = Controller_create(&GainController_Type, Gain_vel);
 
-    Controller* controllers[NUM_CTRLS] = {G_const1, G_const2, G_const3};
+    // P controller for actuator posion
+    G1_pos = Controller_create(&GainController_Type, Gain_pos);
+    G2_pos = Controller_create(&GainController_Type, Gain_pos);
+    G3_pos = Controller_create(&GainController_Type, Gain_pos);
+
+    Controller* controllers[] = {G1_pos, G2_pos, G3_pos, G1_vel, G2_vel, G3_vel,};
     Link* links[NUM_LINKS] = {link1, link2, link3, link4};
     
     // setup scara robot with simple setup for testing
@@ -137,15 +149,15 @@ int main(void)
         bool did_work = false;
 
         // -------------------------------------------------
-        // 1 kHz PID/control loop
+        // 1 kHz Vel_PID/control loop
         // -------------------------------------------------
         int pid_steps = 0;
 
-        while (now >= next_pid_time && pid_steps < MAX_PID_STEPS_PER_LOOP)
+        while (now >= next_pid_time)
         {
-            Control_Update(PID_DT);
+            Control_Update();
 
-            next_pid_time += PID_DT;
+            next_pid_time += CTRL_DT;
             pid_steps++;
             did_work = true;
         }
@@ -153,7 +165,7 @@ int main(void)
         // If PID falls too far behind, resync instead of spiraling.
         if (pid_steps >= MAX_PID_STEPS_PER_LOOP)
         {
-            next_pid_time = now + PID_DT;
+            next_pid_time = now + CTRL_DT;
         }
 
         // -------------------------------------------------
@@ -188,8 +200,13 @@ int main(void)
 
     ROBOT_dtor(SCARA);
 
-    Controller_destroy(G_const1);
-    Controller_destroy(G_const2);
+    Controller_destroy(G1_vel);
+    Controller_destroy(G2_vel);
+    Controller_destroy(G3_vel);
+
+    Controller_destroy(G1_pos);
+    Controller_destroy(G2_pos);
+    Controller_destroy(G3_pos);
 
     LINK_dtor(link1);
     LINK_dtor(link2);
@@ -208,16 +225,18 @@ int main(void)
     return 0;
 }
 
+void Pos_Ctrl_Update(void){
+    ROBOT_update(SCARA);
+}
+
 
 // ---------------------------------------------------------
 // Runs at 1 kHz
 // Put PID, control, simulation, path math, etc. here.
 // ---------------------------------------------------------
-static void Control_Update(double dt)
+void Control_Update(void)
 {
     PROFILER_Begin(&prof_control);
-
-    (void)dt;
 
     float t = (float)GetTime();
 
@@ -251,7 +270,7 @@ static void Control_Update(double dt)
 // Runs only when PID and render are not due
 // Put low-priority background work here.
 // ---------------------------------------------------------
-static void IdleTasks(void)
+void IdleTasks(void)
 {
     // Examples:
     // - process queued commands
@@ -264,7 +283,7 @@ static void IdleTasks(void)
     // Do not block here.
 }
 
-static void DrawWorldAxes3D(float length)
+void DrawWorldAxes3D(float length)
 {
     const float shaftRadius = 0.0225f;
     const float headRadius  = 0.07f;

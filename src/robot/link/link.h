@@ -80,7 +80,7 @@ extern void LINK_Set_Pose( Link* self, const Vector3* start, const Vector3* end,
  * @param self pointer to the link instance
  * @param start the start vector
  */
-void LINK_Set_Start(Link* self, Vector3 start);
+extern void LINK_Set_Start(Link* self, Vector3 start);
 
 /**
  * @brief  Set the link end vector
@@ -88,7 +88,7 @@ void LINK_Set_Start(Link* self, Vector3 start);
  * @param self pointer to the link instance
  * @param end the end vector
  */
-void LINK_Set_End(Link* self, Vector3 end);
+extern void LINK_Set_End(Link* self, Vector3 end);
 
 /**
  * @brief Set the link JP
@@ -96,7 +96,7 @@ void LINK_Set_End(Link* self, Vector3 end);
  * @param self pointer to the link instance
  * @param jp the JP
  */
-void LINK_Set_JP(Link* self, float jp);
+extern void LINK_Set_JP(Link* self, float jp);
 
 /**
  * @brief Get the joint pos of the link
@@ -104,7 +104,7 @@ void LINK_Set_JP(Link* self, float jp);
  * @param self  pointer to the link instance
  * @return float joint pos
  */
-float LINK_Get_JP(const Link* self);
+extern float LINK_Get_JP(const Link* self);
 
 /**
  * @brief Set the world-space heading angle of the link.
