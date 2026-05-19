@@ -5,7 +5,7 @@
 #include "utils/Exceptions_Assertions/assert.h"
 #include "utils/MemAllocator/mem.h"
 
-const Except_t Zfilter_Failed = {"Z-Filter faild"};
+const Except_t Zfilter_Failed = {"Z-Filter failed"};
 
 struct ZFilter {
     float *b;     // numerator coefficients
@@ -39,6 +39,7 @@ ZFilter* ZFilter_ctor(const float *b_in, uint32_t nb,
 
         filter->nb = nb;
         filter->na = na;
+        // ny is always na - 1; safe since na == 0 is checked above
         filter->ny = na - 1;
 
         filter->b = ALLOC(nb * sizeof(float));
@@ -58,7 +59,7 @@ ZFilter* ZFilter_ctor(const float *b_in, uint32_t nb,
         }
 
     } EXCEPT(MemroyError) {
-        printf("ZFilter allocation failed: %s\n", Except_frame.exception->reason);
+        LOG_ERROR_MSG(NO_ERROR, "ZFilter allocation failed: %s", Except_frame.exception->reason);
 
         if (filter) ZFilter_dtor(filter);
         RAISE(Zfilter_Failed);
@@ -90,6 +91,8 @@ float ZFilter_update(ZFilter *f, float x)
         y += f->b[i] * f->x_hist[i];
     }
 
+    // Feedback part: starts at i=1 because a[0] is assumed to be 1 and not used here.
+    // If f->na == 1, this loop is skipped (no feedback terms), which is correct.
     for (uint32_t i = 1; i < f->na; i++) {
         y -= f->a[i] * f->y_hist[i - 1];
     }
@@ -125,7 +128,6 @@ void ZFilter_reset(ZFilter *f)
 void ZFilter_dtor(ZFilter *f)
 {
     if (!f)
-        return;
 
     LOG_DEBUG_MSG(NO_ERROR, "freeing Zfilter");
 
@@ -134,4 +136,9 @@ void ZFilter_dtor(ZFilter *f)
     FREE(f->b);
     FREE(f->a);
     FREE(f);
+
+    f->x_hist = NULL;
+    f->y_hist = NULL;
+    f->b = NULL;
+    f->a = NULL;
 }

@@ -2,6 +2,7 @@
 #define LINK_LINK_PROTECTED_H_
 
 #include "Control/Actuator/Actuator.h"
+#include "utils/Exceptions_Assertions/except.h"
 #include "link.h"
 #include "raymath.h"
 #include "rlgl.h"
@@ -35,6 +36,7 @@ typedef struct Link_protected{
     Vector3 Start; // where the axis of rotation is located
     Vector3 End; // where the next link will be attached
     float JP;  // revolute: angle in radians, prismatic: extension distance
+    float Heading;
     Link_type type; // type of the link
     Actuator* actuator; // actuator for the link V
     Vector3 (*draw)(Link* self);
@@ -84,11 +86,11 @@ static Vector3 LINK_Draw_revolute(Link* self)
 
     Vector3 localEnd = {
         .x = length,
-        .y = 0.0f,
+        .y = self->dim.y,
         .z = 0.0f
     };
 
-    Vector3 end = Vector3Add(p->Start, RotateAroundY(localEnd, p->JP));
+    Vector3 end = Vector3Add(p->Start, RotateAroundY(localEnd, p->Heading));
     p->End = end;
 
     rlPushMatrix();
@@ -96,12 +98,12 @@ static Vector3 LINK_Draw_revolute(Link* self)
         rlTranslatef(p->Start.x, p->Start.y, p->Start.z);
 
         // Revolute joint: rotate around vertical Y axis
-        rlRotatef(p->JP * RAD2DEG, 0.0f, 1.0f, 0.0f);
+        rlRotatef(p->Heading * RAD2DEG, 0.0f, 1.0f, 0.0f);
 
         // Move cube center away from joint pivot
         rlTranslatef(localCenter.x, localCenter.y, localCenter.z);
 
-        DrawCubeV(Vector3Zero(), self->dim, self->color);
+        //DrawCubeV(Vector3Zero(), self->dim, self->color);
         DrawCubeWiresV(Vector3Zero(), self->dim, BLACK);
 
     rlPopMatrix();
@@ -122,58 +124,73 @@ static Vector3 LINK_Draw_revolute(Link* self)
  */
 static Vector3 LINK_Draw_prismatic(Link* self)
 {
-    if (!self) {
+    if (!self || !self->protected) {
         RAISE(NullptrError);
     }
 
     Link_protected* p = self->protected;
 
-    float drawLength = self->dim.x + p->JP;
+    /*
+        Convention for this version:
 
-    if (drawLength < 0.001f) {
-        drawLength = 0.001f;
-    }
+        p->Start = fixed parent attachment point
+        p->JP    = slide distance
+        visualStart = translated position of this link
+        p->End   = translated end of this link
 
-    Vector3 drawDim = {
-        .x = drawLength,
-        .y = self->dim.y,
-        .z = self->dim.z
+        The link does NOT stretch.
+        The whole link translates.
+    */
+
+    float slide = p->JP;
+
+    Vector3 slideOffset = {
+        .x = 0.0f,
+        .y = -slide,   // use +slide if you want upward motion
+        .z = 0.0f
     };
 
+    Vector3 visualStart = Vector3Add(p->Start, slideOffset);
+
     Vector3 localCenter = {
-        .x = drawLength / 2.0f,
-        .y = self->dim.y / 2.0f,
+        .x = 0.0f,
+        .y = -self->dim.y / 2.0f,
         .z = 0.0f
     };
 
     Vector3 localEnd = {
-        .x = drawLength,
-        .y = 0.0f,
+        .x = 0.0f,
+        .y = -self->dim.y,
         .z = 0.0f
     };
 
-    Vector3 end = Vector3Add(p->Start, localEnd);
+    Vector3 end = Vector3Add(visualStart, localEnd);
     p->End = end;
 
     rlPushMatrix();
 
+        // Move to fixed parent point
         rlTranslatef(p->Start.x, p->Start.y, p->Start.z);
 
-        // Prismatic joint: no rotation from JP.
-        // JP changes the link length.
+        // Keep inherited heading
+        rlRotatef(p->Heading * RAD2DEG, 0.0f, 1.0f, 0.0f);
+
+        // Apply prismatic translation
+        rlTranslatef(slideOffset.x, slideOffset.y, slideOffset.z);
+
+        // Move cube center relative to translated start
         rlTranslatef(localCenter.x, localCenter.y, localCenter.z);
 
-        DrawCubeV(Vector3Zero(), drawDim, self->color);
-        DrawCubeWiresV(Vector3Zero(), drawDim, BLACK);
+        DrawCubeWiresV(Vector3Zero(), self->dim, BLACK);
 
     rlPopMatrix();
 
-    DrawSphere(p->Start, 0.08f, RED);
-    DrawSphere(end, 0.08f, BLUE);
-    DrawLine3D(p->Start, end, PURPLE);
+    DrawSphere(p->Start, 0.08f, RED);          // fixed parent point
+    DrawSphere(visualStart, 0.08f, ORANGE);    // translated top of link
+    DrawSphere(p->End, 0.08f, BLUE);           // translated end
+    DrawLine3D(p->Start, visualStart, PURPLE);
+    DrawLine3D(visualStart, p->End, PURPLE);
 
-    return end;
+    return p->End;
 }
-
-
 #endif // LINK_LINK_PROTECTED_H_

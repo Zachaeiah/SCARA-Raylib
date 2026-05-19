@@ -1,34 +1,19 @@
 {
-    // See https://go.microsoft.com/fwlink/?LinkId=733558
-    // for the documentation about the tasks.json format
     "version": "2.0.0",
-    "tasks": 
-    [
+    "tasks": [
         {
             "label": "build debug",
             "type": "process",
             "command": "make",
             "args": [
+                "RAYLIB_PATH=C:/raylib/raylib",
                 "PLATFORM=PLATFORM_DESKTOP",
-                "BUILD_MODE=DEBUG",
+                "BUILD_MODE=DEBUG"
             ],
             "windows": {
-                "command": "C:/raylib/w64devkit/bin/mingw32-make.exe",
-                "args": [
-                    "RAYLIB_PATH=C:/raylib",
-                    "BUILD_MODE=DEBUG"
-                ],
+                "command": "C:/raylib/w64devkit/bin/mingw32-make.exe"
             },
-            "osx": {
-                "args": [
-                    "RAYLIB_PATH=<path_to_raylib>/raylib",
-                    "BUILD_MODE=DEBUG"
-                ],
-            },
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
+            "group": "build",
             "problemMatcher": [
                 "$gcc"
             ]
@@ -38,18 +23,12 @@
             "type": "process",
             "command": "make",
             "args": [
+                "RAYLIB_PATH=C:/raylib/raylib",
                 "PLATFORM=PLATFORM_DESKTOP",
+                "BUILD_MODE=RELEASE"
             ],
             "windows": {
-                "command": "C:/raylib/w64devkit/bin/mingw32-make.exe",
-                "args": [
-                    "RAYLIB_PATH=C:/raylib"
-                ],
-            },
-            "osx": {
-                "args": [
-                    "RAYLIB_PATH=<path_to_raylib>/raylib",
-                ],
+                "command": "C:/raylib/w64devkit/bin/mingw32-make.exe"
             },
             "group": "build",
             "problemMatcher": [
@@ -57,22 +36,57 @@
             ]
         },
         {
-            "label": "build and run",
+            "label": "run exe",
+            "type": "process",
+            "command": "${workspaceFolder}/main.exe",
+            "windows": {
+                "command": "${workspaceFolder}/main.exe"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "make and run",
             "type": "process",
             "command": "make",
-            "windows": {
-                "command": "C:/raylib/w64devkit/bin/mingw32-make.exe",
-                "args": [
+            "args": [
                 "run",
                 "RAYLIB_PATH=C:/raylib/raylib",
+                "PLATFORM=PLATFORM_DESKTOP",
                 "BUILD_MODE=DEBUG"
-]
+            ],
+            "windows": {
+                "command": "C:/raylib/w64devkit/bin/mingw32-make.exe"
             },
+            "group": "build",
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "clean",
+            "type": "process",
+            "command": "make",
+            "args": [
+                "clean",
+                "RAYLIB_PATH=C:/raylib/raylib"
+            ],
+            "windows": {
+                "command": "C:/raylib/w64devkit/bin/mingw32-make.exe"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "clean build and run",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "clean",
+                "make and run"
+            ],
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
-            "problemMatcher": ["$gcc"]
+            "problemMatcher": []
         }
     ]
 }

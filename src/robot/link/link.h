@@ -19,14 +19,14 @@ extern "C" {
 typedef struct Link_protected Link_protected;
 
 typedef enum Link_type{
-    REVOLUTE_LINK, // link that rotates around Y axis at the bottom of the link
-    PRISMATIC_LINK // link that extends and retracts along the X axis
+    REVOLUTE_LINK,   // link that rotates around Y axis
+    PRISMATIC_LINK   // link that extends and retracts along Y axis
 } Link_type;
 
 typedef struct Link
 {
     Color color; // color of the link
-    Vector3 dim; // x: length, y: width, z: height
+    Vector3 dim; // x: length, y: height, z: width/depth
     Link_protected* protected; // pointer to the protected data for the link
 
 } Link;
@@ -68,8 +68,9 @@ extern Vector3 LINK_Draw(Link* self);
  * @param start set link start vector
  * @param end set link end vector
  * @param jp set link JP
+ * @param heading set link Heading
  */
-extern void LINK_Set_Pose( Link* self, const Vector3* start, const Vector3* end, const float* jp);
+extern void LINK_Set_Pose( Link* self, const Vector3* start, const Vector3* end, const float* jp, const float* heading);
 
 /**
  * @brief Set the link start vector
@@ -94,6 +95,14 @@ void LINK_Set_End(Link* self, Vector3 end);
  * @param jp the JP
  */
 void LINK_Set_JP(Link* self, float jp);
+
+/**
+ * @brief Set the world-space heading angle of the link.
+ * 
+ * @param self pointer to the link instance
+ * @param headingRad heading angle in radians
+ */
+extern void LINK_Set_Heading(Link* self, float headingRad);
 
 /**
  * @brief will destruct the link and free all allocated memory

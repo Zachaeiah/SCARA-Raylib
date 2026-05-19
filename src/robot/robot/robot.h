@@ -5,7 +5,8 @@
 #include "Robot/link/link.h"
 #include "raylib.h"
 
-#define NUM_LINKS 3
+#define NUM_LINKS 4
+#define NUM_CTRLS 3
 
 typedef struct Robot_protected Robot_protected;
 
@@ -25,7 +26,7 @@ typedef struct Robot{
  * @param links an array of pointers to the links in the robot
  * @return Robot* pointer to the constructed Robot instance
  */
-extern Robot* ROBOT_ctor(Controller* controllers[NUM_LINKS], Link* links[NUM_LINKS]);
+extern Robot* ROBOT_ctor(Controller* controllers[NUM_CTRLS], Link* links[NUM_LINKS]);
 
 /**
  * @brief Sets the limits for the robot joints and links.

@@ -5,14 +5,15 @@
 #include "Control/Ztransform/Ztransform.h"
 #include "utils/Exceptions_Assertions/except.h"
 
+/**
+ * @brief Exception object indicating actuator failure, used for error handling in actuator operations.
+ */
 extern const Except_t Actuator_Failed;
 
 /**
  * @brief The Actuator structure, which applies a ZFilter to the input and includes dead zone and saturation limits.
- * 
  */
 typedef struct Actuator Actuator;
-
 
 /**
  * @brief Constructs a new Actuator object with the given filter coefficients and limits.
@@ -23,7 +24,7 @@ typedef struct Actuator Actuator;
  * @return Actuator* 
  */
 extern Actuator* Actuator_ctor(ZFilter* filter,
-                        float Dead_Zone, float Saturation);
+                        float dead_zone, float saturation);
 
 /**
  * @brief Updates the actuator with a new input value
@@ -36,18 +37,17 @@ extern float Actuator_update(Actuator* self, float x_in);
 
 /**
  * @brief Resets the actuator to its initial state
- * 
  * @param self pointer to the actuator instance
  */
-
 extern void Actuator_reset(Actuator* self);
 
 
 /**
- * @brief Construct a new Actuator_dtor object
+ * @brief Destroys the Actuator object and frees resources
  * 
  * @param self pointer to the actuator instance
  */
 extern void Actuator_dtor(Actuator* self);
+
 
 #endif

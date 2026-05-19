@@ -21,7 +21,7 @@ static int inRangef(float value, float min, float max) {
  * @param links an array of pointers to the links in the robot
  * @return Robot* pointer to the constructed Robot instance
  */
-Robot* ROBOT_ctor(Controller* controllers[NUM_LINKS], Link* links[NUM_LINKS]){
+Robot* ROBOT_ctor(Controller* controllers[NUM_CTRLS], Link* links[NUM_LINKS]){
 
     Robot* robot = NULL;
     Robot_protected* protected = NULL;
@@ -33,7 +33,14 @@ Robot* ROBOT_ctor(Controller* controllers[NUM_LINKS], Link* links[NUM_LINKS]){
     }
 
     for(int i = 0; i < NUM_LINKS; i++) {
-        if (controllers[i] == NULL || links[i] == NULL) {
+        if (links[i] == NULL) {
+            RAISE(NullptrError);
+            return NULL;
+        }
+    }
+
+    for(int i = 0; i < NUM_CTRLS; i++) {
+        if (controllers[i] == NULL) {
             RAISE(NullptrError);
             return NULL;
         }
@@ -302,17 +309,27 @@ void ROBOT_Draw(Robot* self){
 
     Vector3 origin = Vector3Zero();
 
-    // bace
-    LINK_Set_Pose(self->protected->links[0], &origin , NULL, NULL); // set the start position of the first link to the origin
-    Vector3 end = LINK_Draw(self->protected->links[0]); // draw the first link and get the end position
+    Link* link1 = self->protected->links[0];
+    Link* link2 = self->protected->links[1];
+    Link* link3 = self->protected->links[2];
+    Link* link4 = self->protected->links[3];
 
-    // link 1
-    LINK_Set_Start(self->protected->links[1], end); // set the start position of the second link to the end of the first link
-    end = LINK_Draw(self->protected->links[1]); // draw the second link and get the end position
 
-    // link 2
-    LINK_Set_Start(self->protected->links[2], end); // set the start position of the third link to the end of the second link
-    end = LINK_Draw(self->protected->links[2]); // draw the third link and get the end position
 
-    
+    // link1: fixed base/body
+    LINK_Set_Start(link1, origin);
+    Vector3 end1 = LINK_Draw(link1);
+
+    // link2: rotated by joint1
+    LINK_Set_Start(link2, end1);
+    Vector3 end2 = LINK_Draw(link2);
+
+    // link3: prismatic link
+    LINK_Set_Start(link3, end2);
+    Vector3 end3 = LINK_Draw(link3);
+
+    // link4 starts wherever link3's JP-controlled end is
+    LINK_Set_Start(link4, end3);
+    LINK_Draw(link4);
+
 }

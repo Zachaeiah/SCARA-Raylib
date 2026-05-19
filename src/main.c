@@ -15,8 +15,8 @@
 // ---------------------------------------------------------
 // Timing
 // ---------------------------------------------------------
-#define SCREEN_WIDTH  800
-#define SCREEN_HEIGHT 450
+#define SCREEN_WIDTH  1600
+#define SCREEN_HEIGHT 900
 
 #define RENDER_HZ 60.0
 #define PID_HZ    1000.0
@@ -31,17 +31,30 @@
 // ---------------------------------------------------------
 static Camera camera = { 0 };
 
-static double pid_time = 0.0;
-static uint64_t pid_count = 0;
-static Vector3 cubePosition = { 0 };
-
 static Robot* SCARA;
+
+Controller* G_const1 = NULL;
+Controller* G_const2 = NULL;
+Controller* G_const3 = NULL;
+
+ZFilter* motor_plant1 = NULL;
+ZFilter* motor_plant2 = NULL;
+ZFilter* motor_plant3 = NULL;
+
+Actuator* actuator1 = NULL;
+Actuator* actuator2 = NULL;
+Actuator* actuator3 = NULL;
+
+Link* link1 = NULL;
+Link* link2 = NULL;
+Link* link3 = NULL;
+Link* link4 = NULL;
 
 // ---------------------------------------------------------
 // Functions
 // ---------------------------------------------------------
-static void PID_Update(double dt);
-static void Other_IdleTasks(void);
+static void Control_Update(double dt);
+static void IdleTasks(void);
 static void UpdateDrawFrame(void);
 
 // ---------------------------------------------------------
@@ -54,84 +67,123 @@ int main(void)
     }
 
     float Gain = 2.0f;
-    Controller* G_const1 = NULL;
-    Controller* G_const2 = NULL;
-    Controller* G_const3 = NULL;
 
-    ZFilter* motor_plant1 = NULL;
-    ZFilter* motor_plant2 = NULL;
-    ZFilter* motor_plant3 = NULL;
     float plant_b[] = { 1.0f };
     float plant_a[] = { 1.0f };
 
-    Actuator* actuator1 = NULL;
-    Actuator* actuator2 = NULL;
-    Actuator* actuator3 = NULL;
     float Dead_Zone = 0.0f, Saturation = 12.0f;
 
-    Link* link1 = NULL;
-    Link* link2 = NULL;
-    Link* link3 = NULL;
 
     Vector3 link1Dim = { 0.35f, 1.0f, 0.35f }; // bace REVOLUTE LINK 
-    Vector3 link2Dim = { 4.0f, 0.35f, 0.35f }; // link 2 REVOLUTE LINK 
-    Vector3 link3Dim = { 0.35f, 2.0f, 0.35f }; // link 2 PRISMATIC_LINK
+    Vector3 link2Dim = { 2.0f, 0.35f, 0.35f }; // link 2 REVOLUTE LINK 
+    Vector3 link3Dim = { 1.5f, 0.35f, 0.35f }; // link 2 PRISMATIC_LINK
+    Vector3 link4Dim = { 0.35f, 1.7f, 0.35f }; // link 2 none
 
     // setup simple plands for easy testing
-    LOG_DEBUG_MSG(NO_ERROR, "Crateing Motor Plant with b = {%f}, a = {%f}", plant_b[0], plant_a[0]);
     motor_plant1 = ZFilter_ctor(plant_b, 1, plant_a, 1);
     motor_plant2 = ZFilter_ctor(plant_b, 1, plant_a, 1);
     motor_plant3 = ZFilter_ctor(plant_b, 1, plant_a, 1);
 
     // setup simple actuator for testing
-    LOG_DEBUG_MSG(NO_ERROR, "Creating Actuator with Motor Plant, DZ = %f, SAT = %f", Dead_Zone, Saturation);
     actuator1 = Actuator_ctor(motor_plant1, Dead_Zone, Saturation);
     actuator2 = Actuator_ctor(motor_plant2, Dead_Zone, Saturation);
     actuator3 = Actuator_ctor(motor_plant3, Dead_Zone, Saturation);
 
     // setup simple links for testing
-    LOG_DEBUG_MSG(NO_ERROR, "Creating Revolute link with actuator");
-    link1 = LINK_ctor(link1Dim, ORANGE, REVOLUTE_LINK, actuator1);
-    link2 = LINK_ctor(link2Dim, SKYBLUE, REVOLUTE_LINK, actuator2);
-    link3 = LINK_ctor(link2Dim, SKYBLUE, PRISMATIC_LINK, actuator3);
+    link1 = LINK_ctor(link1Dim, RED, REVOLUTE_LINK, actuator1);
+    link2 = LINK_ctor(link2Dim, GREEN, REVOLUTE_LINK, actuator2);
+
+    // link3 owns the prismatic joint
+    link3 = LINK_ctor(link3Dim, BLUE, REVOLUTE_LINK, actuator3);
+
+    // link4 is just the moving tool/end link
+    link4 = LINK_ctor(link4Dim, ORANGE, PRISMATIC_LINK, NULL);
 
     // setup simple P Controller for testing
-    LOG_DEBUG_MSG(NO_ERROR, "crateing gain controller");
     G_const1 = Controller_create(&GainController_Type, Gain);
     G_const2 = Controller_create(&GainController_Type, Gain);
     G_const3 = Controller_create(&GainController_Type, Gain);
 
-    Controller **controllers = {G_const1, G_const2, G_const2};
-    Link **links = {link1, link2, link3};
+    Controller* controllers[NUM_CTRLS] = {G_const1, G_const2, G_const3};
+    Link* links[NUM_LINKS] = {link1, link2, link3, link4};
     
     // setup scara robot with simple setup for testing
     SCARA = ROBOT_ctor(controllers, links);
 
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "SCARA simulator");
 
-    float output = ZFilter_update(motor_plant1, 2);
-    LOG_DEBUG_MSG(NO_ERROR, "update motor_plant(2) -> %f", output);
+    camera.position = (Vector3){ 10.0f, 10.0f, 8.0f };
+    camera.target = (Vector3){ 0.0f, 0.0f, 0.0f };
+    camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };
+    camera.fovy = 60.0f;
+    camera.projection = CAMERA_PERSPECTIVE;
 
-    output = Actuator_update(actuator1, 2);
-    LOG_DEBUG_MSG(NO_ERROR, "update actuator(2) -> %f", output);
+    double now = GetTime();
 
-    output = Actuator_update(actuator1, 13);
-    LOG_DEBUG_MSG(NO_ERROR, "update actuator(13) -> %f", output);
+    double next_pid_time = now;
+    double next_render_time = now;
 
-    output = LINK_update(link1, 2);
-    LOG_DEBUG_MSG(NO_ERROR, "update link1(2) -> %f", output);
+    LOG_MESSAGE("Program started");
 
-    output = Controller_update(G_const1, 2);
-    LOG_DEBUG_MSG(NO_ERROR, "update G_const(2) -> %f", output);
+    while (!WindowShouldClose())
+    {
+        now = GetTime();
 
+        bool did_work = false;
 
+        // -------------------------------------------------
+        // 1 kHz PID/control loop
+        // -------------------------------------------------
+        int pid_steps = 0;
 
+        while (now >= next_pid_time && pid_steps < MAX_PID_STEPS_PER_LOOP)
+        {
+            Control_Update(PID_DT);
 
+            next_pid_time += PID_DT;
+            pid_steps++;
+            did_work = true;
+        }
 
+        // If PID falls too far behind, resync instead of spiraling.
+        if (pid_steps >= MAX_PID_STEPS_PER_LOOP)
+        {
+            next_pid_time = now + PID_DT;
+        }
 
+        // -------------------------------------------------
+        // 60 FPS screen update/draw
+        // -------------------------------------------------
+        if (now >= next_render_time)
+        {
+            UpdateDrawFrame();
+
+            next_render_time += RENDER_DT;
+            did_work = true;
+
+            // If rendering falls behind, resync.
+            if (now > next_render_time + RENDER_DT)
+            {
+                next_render_time = now + RENDER_DT;
+            }
+        }
+
+        // -------------------------------------------------
+        // Low-priority tasks
+        // -------------------------------------------------
+        if (!did_work)
+        {
+            IdleTasks();
+
+            // Give CPU a tiny break.
+            // This prevents the loop from burning 100% CPU.
+            WaitTime(0.0001);
+        }
+    }
 
     ROBOT_dtor(SCARA);
 
-    Cntroller_destroy(G_const1);
+    Controller_destroy(G_const1);
     Controller_destroy(G_const2);
 
     LINK_dtor(link1);
@@ -143,165 +195,54 @@ int main(void)
     ZFilter_dtor(motor_plant1);
     ZFilter_dtor(motor_plant2);
 
+    Logger_shutdown();
 
-
-
-
-
-    
-
-
-    // LOG_MESSAGE("Program started");
-
-    // LOG_WARN_MSG(12, "This is a warning message with no specific error code.");
-
-    // InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "raylib simple scheduler");
-
-    // camera.position = (Vector3){ 10.0f, 10.0f, 8.0f };
-    // camera.target = (Vector3){ 0.0f, 0.0f, 0.0f };
-    // camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };
-    // camera.fovy = 60.0f;
-    // camera.projection = CAMERA_PERSPECTIVE;
-
-    // double now = GetTime();
-
-    // double next_pid_time = now;
-    // double next_render_time = now;
-
-    // while (!WindowShouldClose())
-    // {
-    //     now = GetTime();
-
-    //     bool did_work = false;
-
-    //     // -------------------------------------------------
-    //     // 1 kHz PID/control loop
-    //     // -------------------------------------------------
-    //     int pid_steps = 0;
-
-    //     while (now >= next_pid_time && pid_steps < MAX_PID_STEPS_PER_LOOP)
-    //     {
-    //         PID_Update(PID_DT);
-
-    //         next_pid_time += PID_DT;
-    //         pid_steps++;
-    //         did_work = true;
-    //     }
-
-    //     // If PID falls too far behind, resync instead of spiraling.
-    //     if (pid_steps >= MAX_PID_STEPS_PER_LOOP)
-    //     {
-    //         next_pid_time = now + PID_DT;
-    //     }
-
-    //     // -------------------------------------------------
-    //     // 60 FPS screen update/draw
-    //     // -------------------------------------------------
-    //     if (now >= next_render_time)
-    //     {
-    //         UpdateDrawFrame();
-
-    //         next_render_time += RENDER_DT;
-    //         did_work = true;
-
-    //         // If rendering falls behind, resync.
-    //         if (now > next_render_time + RENDER_DT)
-    //         {
-    //             next_render_time = now + RENDER_DT;
-    //         }
-    //     }
-
-    //     // -------------------------------------------------
-    //     // Low-priority tasks
-    //     // -------------------------------------------------
-    //     if (!did_work)
-    //     {
-    //         Other_IdleTasks();
-
-    //         // Give CPU a tiny break.
-    //         // This prevents the loop from burning 100% CPU.
-    //         WaitTime(0.0001);
-    //     }
-    // }
-
-    // Logger_shutdown();
-
-    // CloseWindow();
+    CloseWindow();
     
 
     return 0;
 }
 
 
-static Vector3 RotateAroundY(Vector3 v, float angleRad)
-{
-    float c = cosf(angleRad);
-    float s = sinf(angleRad);
-
-    return (Vector3){
-        .x = v.x*c + v.z*s,
-        .y = v.y,
-        .z = -v.x*s + v.z*c
-    };
-}
-
-static Vector3 DrawTestLink(Vector3 start, Vector3 dim, float angleRad, Color color)
-{
-    Vector3 localCenter = {
-        dim.x / 2.0f,
-        dim.y / 2.0f,
-        0.0f
-    };
-
-    Vector3 localEnd = {
-        dim.x,
-        dim.y,
-        0.0f
-    };
-
-    Vector3 end = Vector3Add(start, RotateAroundY(localEnd, angleRad));
-
-    rlPushMatrix();
-
-        rlTranslatef(start.x, start.y, start.z);
-
-        // Rotate around vertical Y axis
-        rlRotatef(angleRad * RAD2DEG, 0.0f, 1.0f, 0.0f);
-
-        // Move cube center relative to pivot
-        rlTranslatef(localCenter.x, localCenter.y, localCenter.z);
-
-        DrawCubeV(Vector3Zero(), dim, color);
-        DrawCubeWiresV(Vector3Zero(), dim, BLACK);
-
-    rlPopMatrix();
-
-    // Debug visuals
-    DrawSphere(start, 0.08f, RED);       // pivot/start joint
-    DrawSphere(end, 0.08f, BLUE);        // next joint/end
-    DrawLine3D(start, end, PURPLE);      // centerline
-
-    return end;
-}
-
 // ---------------------------------------------------------
 // Runs at 1 kHz
 // Put PID, control, simulation, path math, etc. here.
 // ---------------------------------------------------------
-static void PID_Update(double dt)
+static void Control_Update(double dt)
 {
-    pid_time += dt;
-    pid_count++;
+    (void)dt;
 
-    // Example background math
-    cubePosition.y = 1.0f + 0.75f * sinf((float)(pid_time * 6.2831853));
+    float t = (float)GetTime();
+
+    float joint1Angle = 0.0f;
+    float joint2Angle = sinf(t * 0.1f * PI) * 90 * DEG2RAD;
+
+    // Distance, not angle. Range: 0.0 to 1.0
+    float joint3Distance = (sinf(t * 0.5f * PI) -1) * 1.70/2;
+
+    float link1Heading = 0.0f;
+    float link2Heading = joint1Angle;
+    float link3Heading = joint1Angle + joint2Angle;
+    float link4Heading = joint1Angle + joint2Angle;
+
+    LINK_Set_Heading(link1, link1Heading);
+    LINK_Set_JP(link1, joint1Angle);
+
+    LINK_Set_Heading(link2, link2Heading);
+    LINK_Set_JP(link2, joint2Angle);
+
+    LINK_Set_Heading(link3, link3Heading);
+    LINK_Set_JP(link3, 0.0f);   // link3 is revolute right now, so do not use JP for slide here
+
+    LINK_Set_Heading(link4, link4Heading);
+    LINK_Set_JP(link4, joint3Distance);   // link4 translates using its JP
 }
 
 // ---------------------------------------------------------
 // Runs only when PID and render are not due
 // Put low-priority background work here.
 // ---------------------------------------------------------
-static void Other_IdleTasks(void)
+static void IdleTasks(void)
 {
     // Examples:
     // - process queued commands
@@ -322,22 +263,6 @@ static void UpdateDrawFrame(void)
 {
     UpdateCamera(&camera, CAMERA_ORBITAL);
 
-    float t = (float)GetTime();
-
-    float joint1Angle = sinf(t * 1.0f) * 90.0f * DEG2RAD;
-    float joint2Angle = sinf(t * 1.7f) * 90.0f * DEG2RAD;
-
-    float link1AngleAbs = joint1Angle;
-    float link2AngleAbs = joint1Angle + joint2Angle;
-
-    Vector3 link1Start = { 1.0f, 0.0f, 0.0f };
-
-    Vector3 link0Dim = { 0.35f, 1.0f, 0.35f };
-    Vector3 link1Dim = { 4.0f, 0.35f, 0.35f };
-    Vector3 link2Dim = { 3.0f, 0.30f, 0.30f };
-
-    
-
     BeginDrawing();
 
         ClearBackground(RAYWHITE);
@@ -355,23 +280,11 @@ static void UpdateDrawFrame(void)
 
             DrawGrid(10, 1.0f);
 
-            Vector3 link1End = DrawTestLink(link1Start, link1Dim, link1AngleAbs, ORANGE);
-            Vector3 link2End = DrawTestLink(link1End, link2Dim, link2AngleAbs, SKYBLUE);
-
-            DrawSphere(link2End, 0.12f, GREEN); // end effector marker
+            ROBOT_Draw(SCARA);
 
         EndMode3D();
 
         DrawText("Simple scheduler", 10, 40, 20, DARKGRAY);
-        DrawText("Render: 60 FPS", 10, 70, 20, DARKGRAY);
-        DrawText("PID/control: 1 kHz", 10, 100, 20, DARKGRAY);
-
-        DrawText(TextFormat("PID updates: %llu", (unsigned long long)pid_count),
-                 10, 130, 20, DARKGRAY);
-
-        DrawText(TextFormat("PID time: %.3f s", pid_time),
-                 10, 160, 20, DARKGRAY);
-
 
         DrawFPS(10, 10);
 

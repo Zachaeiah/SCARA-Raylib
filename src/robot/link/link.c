@@ -22,6 +22,7 @@ static Link_protected* Link_protected_ctor(Actuator* actuator, Link_type type)
     p->Start = Vector3Zero();
     p->End = Vector3Zero();
     p->JP = 0.0f;
+    p->Heading = 0.0f;
     p->type = type;
     p->actuator = actuator;
 
@@ -49,10 +50,6 @@ Link* LINK_ctor(Vector3 dim, Color color, Link_type type, Actuator* actuator)
 {
     Link* self = NULL;
 
-    if (!actuator) {
-        RAISE(NullptrError);
-    }
-
     if (Vector3Length(dim) <= 0.001f) {
         RAISE(ValueError);
     }
@@ -72,11 +69,26 @@ float LINK_update(Link* self, const float x_in)
         RAISE(NullptrError);
     }
 
-    return Actuator_update(self->protected->actuator, x_in);
+    Link_protected* p = self->protected;
+
+    if (!p) {
+        RAISE(NullptrError);
+    }
+
+    // Passive link: directly use the input as JP
+    if (!p->actuator) {
+        p->JP = x_in;
+        return p->JP;
+    }
+
+    // Actuated link: actuator output becomes the joint position
+    p->JP = Actuator_update(p->actuator, x_in);
+
+    return p->JP;
 }
 
 
-void LINK_Set_Pose( Link* self, const Vector3* start, const Vector3* end, const float* jp)
+void LINK_Set_Pose( Link* self, const Vector3* start, const Vector3* end, const float* jp, const float* heading)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -93,23 +105,51 @@ void LINK_Set_Pose( Link* self, const Vector3* start, const Vector3* end, const 
     if (jp) {
         self->protected->JP = *jp;
     }
+
+    if (heading){
+        self->protected->Heading = *heading;
+    }
 }
 
 void LINK_Set_Start(Link* self, Vector3 start)
 {
-    LINK_Set_Pose(self, &start, NULL, NULL);
+    
+    if (!self) {
+        RAISE(NullptrError);
+    }
+
+    LINK_Set_Pose(self, &start, NULL, NULL, NULL);
 }
 
 
 void LINK_Set_End(Link* self, Vector3 end)
 {
-    LINK_Set_Pose(self, NULL, &end, NULL);
+    
+    if (!self) {
+        RAISE(NullptrError);
+    }
+
+    LINK_Set_Pose(self, NULL, &end, NULL, NULL);
 }
 
 
 void LINK_Set_JP(Link* self, float jp)
 {
-    LINK_Set_Pose(self, NULL, NULL, &jp);
+    
+    if (!self) {
+        RAISE(NullptrError);
+    }
+
+    LINK_Set_Pose(self, NULL, NULL, &jp, NULL);
+}
+
+void LINK_Set_Heading(Link* self, float headingRad)
+{
+    if (!self) {
+        RAISE(NullptrError);
+    }
+
+    LINK_Set_Pose(self, NULL, NULL, NULL, &headingRad);
 }
 
 
@@ -119,11 +159,7 @@ Vector3 LINK_Draw(Link* self)
         RAISE(NullptrError);
     }
 
-    // call the draw function pointer for the link type
-    self->protected->draw(self);
-
-    // Debug visuals
-    return self->protected->End;
+    return self->protected->draw(self);
 }
 
 void LINK_dtor(Link* self)

@@ -48,7 +48,7 @@ void Except_raise(const T* e, const char* file, int line) {
 
     if (p == NULL) {
         const char* reason = Except_reason(e);
-        LOG_ERROR_MSG(NO_ERROR, "%s",reason);
+        Logger_log(LOG_ERROR, file, "", line, 99, "%s", reason);
 
         abort();
         }
