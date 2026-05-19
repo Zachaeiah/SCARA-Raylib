@@ -18,7 +18,10 @@ extern "C" {
 //---------------------------- Structure Definitions ------------------------------------------------
 typedef struct Link_protected Link_protected;
 
-
+typedef enum Link_type{
+    REVOLUTE_LINK, // link that rotates around Y axis at the bottom of the link
+    PRISMATIC_LINK // link that extends and retracts along the X axis
+} Link_type;
 
 typedef struct Link
 {
@@ -35,10 +38,11 @@ typedef struct Link
  * 
  * @param dim the X:lenght Y: width Z:Hight
  * @param color the color of the link
+ * @param type the type of the link
  * @param actuator the actuator for the link
  * @return Link* pointer to the constructed link instance
  */
-extern Link* LINK_ctor(Vector3 dim, Color color, Actuator* actuator);
+extern Link* LINK_ctor(Vector3 dim, Color color, Link_type type, Actuator* actuator);
 
 /**
  * @brief will update the link with a new angle input and return the speed output from the actuator
@@ -58,12 +62,38 @@ extern float LINK_update(Link* self, const float x_in);
 extern Vector3 LINK_Draw(Link* self);
 
 /**
- * @brief will set the start position of the link, which is used to draw the link in the correct position
+ * @brief set the link pose paramaters 
  * 
  * @param self pointer to the link instance
- * @param start the start position of the link, which is used to draw the link in the correct position
+ * @param start set link start vector
+ * @param end set link end vector
+ * @param jp set link JP
  */
-extern void LINK_Set_Start(Link* self, Vector3 start);
+extern void LINK_Set_Pose( Link* self, const Vector3* start, const Vector3* end, const float* jp);
+
+/**
+ * @brief Set the link start vector
+ * 
+ * @param self pointer to the link instance
+ * @param start the start vector
+ */
+void LINK_Set_Start(Link* self, Vector3 start);
+
+/**
+ * @brief  Set the link end vector
+ * 
+ * @param self pointer to the link instance
+ * @param end the end vector
+ */
+void LINK_Set_End(Link* self, Vector3 end);
+
+/**
+ * @brief Set the link JP
+ * 
+ * @param self pointer to the link instance
+ * @param jp the JP
+ */
+void LINK_Set_JP(Link* self, float jp);
 
 /**
  * @brief will destruct the link and free all allocated memory
@@ -71,7 +101,6 @@ extern void LINK_Set_Start(Link* self, Vector3 start);
  * @param self pointer to the link instance
  */
 extern void LINK_dtor(Link* self);
-
 
 
 #ifdef __cplusplus

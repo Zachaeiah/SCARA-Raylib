@@ -1,4 +1,5 @@
 #include "GainController.h"
+#include "utils/Logger/logger.h"
 #include "Control/Controller/Controller_private.h"
 
 /**
@@ -20,9 +21,12 @@ typedef struct GainController {
  */
 static void GainController_ctor(Controller* self, va_list* args)
 {
+    
     GainController* gain = (GainController*)self;
 
     gain->k = (float)va_arg(*args, double);
+
+    LOG_DEBUG_MSG(NO_ERROR, "Crateing Gain controller with gain %f", gain->k);
 }
 
 /**
@@ -36,7 +40,12 @@ static float GainController_update(Controller* self, float x)
 {
     GainController* gain = (GainController*)self;
 
-    return gain->k * x;
+    // compute the output of the controller
+    float output =  gain->k * x;
+
+    LOG_DEBUG_MSG(NO_ERROR,"Updateing GainController with Gain: %f, X: %f, Out: %f", gain->k , x, output);
+
+    return output;
 }
 
 /**
@@ -46,6 +55,7 @@ static float GainController_update(Controller* self, float x)
  */
 static void GainController_reset(Controller* self)
 {
+    LOG_INFO_MSG(NO_ERROR, "Resting Gain controller");
     (void)self;
 }
 
@@ -57,6 +67,8 @@ static void GainController_reset(Controller* self)
  */
 static void GainController_dtor(Controller* self)
 {
+    GainController* gain = (GainController*)self;
+    LOG_DEBUG_MSG(NO_ERROR, "Destroying Gain Controller with gain: %f", gain->k);
     (void)self;
 
     // Nothing dynamic to free for this controller.

@@ -3,7 +3,12 @@
 #include "rlgl.h"
 #include <math.h>
 #include <stdint.h>
-
+#include "Robot/Robot/robot.h"
+#include "Control/Controller/Controller.h"
+#include "Robot/link/link.h"
+#include "Control/Ztransform/Ztransform.h"
+#include "Control/Controllers/Simple/GainController.h"
+#include "Control/Actuator/Actuator.h"
 #include "utils/Logger/logger.h"
 #include "utils/Exceptions_Assertions/except.h"
 
@@ -28,8 +33,9 @@ static Camera camera = { 0 };
 
 static double pid_time = 0.0;
 static uint64_t pid_count = 0;
-
 static Vector3 cubePosition = { 0 };
+
+static Robot* SCARA;
 
 // ---------------------------------------------------------
 // Functions
@@ -47,82 +53,180 @@ int main(void)
        printf("Failed to initialize logger. Logging to stderr.\n");
     }
 
-    LOG_MESSAGE("Program started");
+    float Gain = 2.0f;
+    Controller* G_const1 = NULL;
+    Controller* G_const2 = NULL;
+    Controller* G_const3 = NULL;
 
-    LOG_WARN_MSG(12, "This is a warning message with no specific error code.");
+    ZFilter* motor_plant1 = NULL;
+    ZFilter* motor_plant2 = NULL;
+    ZFilter* motor_plant3 = NULL;
+    float plant_b[] = { 1.0f };
+    float plant_a[] = { 1.0f };
 
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "raylib simple scheduler");
+    Actuator* actuator1 = NULL;
+    Actuator* actuator2 = NULL;
+    Actuator* actuator3 = NULL;
+    float Dead_Zone = 0.0f, Saturation = 12.0f;
 
-    camera.position = (Vector3){ 10.0f, 10.0f, 8.0f };
-    camera.target = (Vector3){ 0.0f, 0.0f, 0.0f };
-    camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };
-    camera.fovy = 60.0f;
-    camera.projection = CAMERA_PERSPECTIVE;
+    Link* link1 = NULL;
+    Link* link2 = NULL;
+    Link* link3 = NULL;
 
-    double now = GetTime();
+    Vector3 link1Dim = { 0.35f, 1.0f, 0.35f }; // bace REVOLUTE LINK 
+    Vector3 link2Dim = { 4.0f, 0.35f, 0.35f }; // link 2 REVOLUTE LINK 
+    Vector3 link3Dim = { 0.35f, 2.0f, 0.35f }; // link 2 PRISMATIC_LINK
 
-    double next_pid_time = now;
-    double next_render_time = now;
+    // setup simple plands for easy testing
+    LOG_DEBUG_MSG(NO_ERROR, "Crateing Motor Plant with b = {%f}, a = {%f}", plant_b[0], plant_a[0]);
+    motor_plant1 = ZFilter_ctor(plant_b, 1, plant_a, 1);
+    motor_plant2 = ZFilter_ctor(plant_b, 1, plant_a, 1);
+    motor_plant3 = ZFilter_ctor(plant_b, 1, plant_a, 1);
 
-    while (!WindowShouldClose())
-    {
-        now = GetTime();
+    // setup simple actuator for testing
+    LOG_DEBUG_MSG(NO_ERROR, "Creating Actuator with Motor Plant, DZ = %f, SAT = %f", Dead_Zone, Saturation);
+    actuator1 = Actuator_ctor(motor_plant1, Dead_Zone, Saturation);
+    actuator2 = Actuator_ctor(motor_plant2, Dead_Zone, Saturation);
+    actuator3 = Actuator_ctor(motor_plant3, Dead_Zone, Saturation);
 
-        bool did_work = false;
+    // setup simple links for testing
+    LOG_DEBUG_MSG(NO_ERROR, "Creating Revolute link with actuator");
+    link1 = LINK_ctor(link1Dim, ORANGE, REVOLUTE_LINK, actuator1);
+    link2 = LINK_ctor(link2Dim, SKYBLUE, REVOLUTE_LINK, actuator2);
+    link3 = LINK_ctor(link2Dim, SKYBLUE, PRISMATIC_LINK, actuator3);
 
-        // -------------------------------------------------
-        // 1 kHz PID/control loop
-        // -------------------------------------------------
-        int pid_steps = 0;
+    // setup simple P Controller for testing
+    LOG_DEBUG_MSG(NO_ERROR, "crateing gain controller");
+    G_const1 = Controller_create(&GainController_Type, Gain);
+    G_const2 = Controller_create(&GainController_Type, Gain);
+    G_const3 = Controller_create(&GainController_Type, Gain);
 
-        while (now >= next_pid_time && pid_steps < MAX_PID_STEPS_PER_LOOP)
-        {
-            PID_Update(PID_DT);
+    Controller **controllers = {G_const1, G_const2, G_const2};
+    Link **links = {link1, link2, link3};
+    
+    // setup scara robot with simple setup for testing
+    SCARA = ROBOT_ctor(controllers, links);
 
-            next_pid_time += PID_DT;
-            pid_steps++;
-            did_work = true;
-        }
 
-        // If PID falls too far behind, resync instead of spiraling.
-        if (pid_steps >= MAX_PID_STEPS_PER_LOOP)
-        {
-            next_pid_time = now + PID_DT;
-        }
+    float output = ZFilter_update(motor_plant1, 2);
+    LOG_DEBUG_MSG(NO_ERROR, "update motor_plant(2) -> %f", output);
 
-        // -------------------------------------------------
-        // 60 FPS screen update/draw
-        // -------------------------------------------------
-        if (now >= next_render_time)
-        {
-            UpdateDrawFrame();
+    output = Actuator_update(actuator1, 2);
+    LOG_DEBUG_MSG(NO_ERROR, "update actuator(2) -> %f", output);
 
-            next_render_time += RENDER_DT;
-            did_work = true;
+    output = Actuator_update(actuator1, 13);
+    LOG_DEBUG_MSG(NO_ERROR, "update actuator(13) -> %f", output);
 
-            // If rendering falls behind, resync.
-            if (now > next_render_time + RENDER_DT)
-            {
-                next_render_time = now + RENDER_DT;
-            }
-        }
+    output = LINK_update(link1, 2);
+    LOG_DEBUG_MSG(NO_ERROR, "update link1(2) -> %f", output);
 
-        // -------------------------------------------------
-        // Low-priority tasks
-        // -------------------------------------------------
-        if (!did_work)
-        {
-            Other_IdleTasks();
+    output = Controller_update(G_const1, 2);
+    LOG_DEBUG_MSG(NO_ERROR, "update G_const(2) -> %f", output);
 
-            // Give CPU a tiny break.
-            // This prevents the loop from burning 100% CPU.
-            WaitTime(0.0001);
-        }
-    }
 
-    Logger_shutdown();
 
-    CloseWindow();
+
+
+
+
+    ROBOT_dtor(SCARA);
+
+    Cntroller_destroy(G_const1);
+    Controller_destroy(G_const2);
+
+    LINK_dtor(link1);
+    LINK_dtor(link2);
+
+    Actuator_dtor(actuator1);
+    Actuator_dtor(actuator2);
+
+    ZFilter_dtor(motor_plant1);
+    ZFilter_dtor(motor_plant2);
+
+
+
+
+
+
+    
+
+
+    // LOG_MESSAGE("Program started");
+
+    // LOG_WARN_MSG(12, "This is a warning message with no specific error code.");
+
+    // InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "raylib simple scheduler");
+
+    // camera.position = (Vector3){ 10.0f, 10.0f, 8.0f };
+    // camera.target = (Vector3){ 0.0f, 0.0f, 0.0f };
+    // camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };
+    // camera.fovy = 60.0f;
+    // camera.projection = CAMERA_PERSPECTIVE;
+
+    // double now = GetTime();
+
+    // double next_pid_time = now;
+    // double next_render_time = now;
+
+    // while (!WindowShouldClose())
+    // {
+    //     now = GetTime();
+
+    //     bool did_work = false;
+
+    //     // -------------------------------------------------
+    //     // 1 kHz PID/control loop
+    //     // -------------------------------------------------
+    //     int pid_steps = 0;
+
+    //     while (now >= next_pid_time && pid_steps < MAX_PID_STEPS_PER_LOOP)
+    //     {
+    //         PID_Update(PID_DT);
+
+    //         next_pid_time += PID_DT;
+    //         pid_steps++;
+    //         did_work = true;
+    //     }
+
+    //     // If PID falls too far behind, resync instead of spiraling.
+    //     if (pid_steps >= MAX_PID_STEPS_PER_LOOP)
+    //     {
+    //         next_pid_time = now + PID_DT;
+    //     }
+
+    //     // -------------------------------------------------
+    //     // 60 FPS screen update/draw
+    //     // -------------------------------------------------
+    //     if (now >= next_render_time)
+    //     {
+    //         UpdateDrawFrame();
+
+    //         next_render_time += RENDER_DT;
+    //         did_work = true;
+
+    //         // If rendering falls behind, resync.
+    //         if (now > next_render_time + RENDER_DT)
+    //         {
+    //             next_render_time = now + RENDER_DT;
+    //         }
+    //     }
+
+    //     // -------------------------------------------------
+    //     // Low-priority tasks
+    //     // -------------------------------------------------
+    //     if (!did_work)
+    //     {
+    //         Other_IdleTasks();
+
+    //         // Give CPU a tiny break.
+    //         // This prevents the loop from burning 100% CPU.
+    //         WaitTime(0.0001);
+    //     }
+    // }
+
+    // Logger_shutdown();
+
+    // CloseWindow();
     
 
     return 0;

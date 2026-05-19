@@ -60,7 +60,7 @@ int Logger_init(const char* path)
     }
 
 
-    LOG_INFO_MSG(NO_ERROR, "Logger initialized with file: %s", log_path);
+    LOG_DEBUG_MSG(NO_ERROR, "Logger initialized with file: %s", log_path);
 
     return 0;
 }
@@ -77,7 +77,7 @@ void Logger_shutdown(void)
 
     // Log the shutdown message before closing the file, if it's not stderr.
     if (flog != NULL && flog != stderr) {
-        LOG_INFO_MSG(NO_ERROR, "Logger shutting down");
+        LOG_DEBUG_MSG(NO_ERROR, "Logger shutting down");
 
         // Flush and close the log file if it's not stderr.
         fflush(flog);
@@ -113,7 +113,7 @@ void Logger_log(int severity, const char* file, const char* func, const uint16_t
     va_start(consoleArgs, strError);
     va_copy(fileArgs, consoleArgs);
 
-    if (error == NO_ERROR && (severity == LOG_DEBUG || severity == LOG_INFO)) {
+    if ((error == NO_ERROR) && (severity == LOG_DEBUG)) {
         formatMsg_v(consoleBuff, sizeof(consoleBuff), severity,
                     strError, consoleArgs);
 

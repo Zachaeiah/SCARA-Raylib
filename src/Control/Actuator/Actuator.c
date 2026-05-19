@@ -1,5 +1,6 @@
 #include "Actuator.h"
 #include <math.h>
+#include "utils/Logger/logger.h"
 #include "Control/Ztransform/Ztransform.h"
 #include "utils/Exceptions_Assertions/assert.h"
 #include "utils/MemAllocator/mem.h"
@@ -131,6 +132,7 @@ void Actuator_reset(Actuator* self){
 void Actuator_dtor(Actuator* self){
     if (!self) return;
 
-    if (self->filter) ZFilter_dtor(self->filter);
+    LOG_DEBUG_MSG(NO_ERROR, "freeing Actuator");
+
     FREE(self);
 }

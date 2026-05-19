@@ -9,36 +9,43 @@
 #include "raymath.h"
 #include "rlgl.h"
 
+#include <math.h>
+
 //---------------------------- Structure Definitions ------------------------------------------------
 
-static Vector3 RotateAroundY(Vector3 v, float angleRad)
+static Link_protected* Link_protected_ctor(Actuator* actuator, Link_type type)
 {
-    float c = cosf(angleRad);
-    float s = sinf(angleRad);
+    Link_protected* p;
 
-    return (Vector3){
-        .x = v.x*c + v.z*s,
-        .y = v.y,
-        .z = -v.x*s + v.z*c
-    };
+    NEW0(p);
+
+    p->Start = Vector3Zero();
+    p->End = Vector3Zero();
+    p->JP = 0.0f;
+    p->type = type;
+    p->actuator = actuator;
+
+    switch (type)
+    {
+        case REVOLUTE_LINK:
+            p->draw = LINK_Draw_revolute;
+            break;
+
+        case PRISMATIC_LINK:
+            p->draw = LINK_Draw_prismatic;
+            break;
+
+        default:
+            FREE(p);
+            RAISE(ValueError);
+            break;
+    }
+
+    return p;
 }
 
-static Link_protected* Link_protected_ctor(Actuator* actuator)
-{
-    Link_protected* protected;
 
-    NEW0(protected);
-
-    protected->Start = Vector3Zero();
-    protected->End = Vector3Zero();
-    protected->JP = 0.0f;
-    protected->actuator = actuator;
-
-    return protected;
-}
-
-
-Link* LINK_ctor(Vector3 dim, Color color, Actuator* actuator)
+Link* LINK_ctor(Vector3 dim, Color color, Link_type type, Actuator* actuator)
 {
     Link* self = NULL;
 
@@ -46,15 +53,16 @@ Link* LINK_ctor(Vector3 dim, Color color, Actuator* actuator)
         RAISE(NullptrError);
     }
 
-    if (FloatEquals(Vector3Length(dim), 0.001f)) {
+    if (Vector3Length(dim) <= 0.001f) {
         RAISE(ValueError);
     }
     
     NEW(self);
+
     self->color = color;
     self->dim = dim;
-    self->protected = Link_protected_ctor(actuator);
-
+    self->protected = Link_protected_ctor(actuator, type);
+    
     return self;
 }
 
@@ -64,18 +72,58 @@ float LINK_update(Link* self, const float x_in)
         RAISE(NullptrError);
     }
 
-    /**
-     * @brief just for testing, will implement the actual control logic later
-     * will just return the input angle for now
-     * 
-     */
+    return Actuator_update(self->protected->actuator, x_in);
+}
 
-    // update the joint angle using the actuator
-    self->protected->JP = x_in;
 
-    return 0.0f;
+void LINK_Set_Pose( Link* self, const Vector3* start, const Vector3* end, const float* jp)
+{
+    if (!self) {
+        RAISE(NullptrError);
+    }
 
-    //return Actuator_update(self->protected->actuator, x_in);
+    if (start) {
+        self->protected->Start = *start;
+    }
+
+    if (end) {
+        self->protected->End = *end;
+    }
+
+    if (jp) {
+        self->protected->JP = *jp;
+    }
+}
+
+void LINK_Set_Start(Link* self, Vector3 start)
+{
+    LINK_Set_Pose(self, &start, NULL, NULL);
+}
+
+
+void LINK_Set_End(Link* self, Vector3 end)
+{
+    LINK_Set_Pose(self, NULL, &end, NULL);
+}
+
+
+void LINK_Set_JP(Link* self, float jp)
+{
+    LINK_Set_Pose(self, NULL, NULL, &jp);
+}
+
+
+Vector3 LINK_Draw(Link* self)
+{
+    if (!self) {
+        RAISE(NullptrError);
+    }
+
+    // call the draw function pointer for the link type
+    self->protected->draw(self);
+
+    // Debug visuals
+    return self->protected->End;
 }
 
 void LINK_dtor(Link* self)
@@ -87,67 +135,11 @@ void LINK_dtor(Link* self)
     if (self->protected) {
         FREE(self->protected);
     }
+
+    
+
     FREE(self);
     return;
-}
-
-
-void LINK_Set_Start(Link* self, Vector3 start)
-{
-    if (!self) {
-        RAISE(NullptrError);
-    }
-
-    self->protected->Start = start;
-}
-
-
-Vector3 LINK_Draw(Link* self)
-{
-    if (!self) {
-        RAISE(NullptrError);
-    }
-
-    Link_protected *protected = self->protected;
-
-    Vector3 localCenter = {
-        self->dim.x / 2.0f,
-        self->dim.y / 2.0f,
-        0.0f
-    };
-
-    Vector3 localEnd = {
-        self->dim.x,
-        self->dim.y,
-        0.0f
-    };
-
-    Vector3 end = Vector3Add(protected->Start, RotateAroundY(localEnd, protected->JP));
-
-    protected->End = end;
-
-    rlPushMatrix();
-
-        rlTranslatef(protected->Start.x, protected->Start.y, protected->Start.z);
-
-        // Rotate around vertical Y axis
-        rlRotatef(protected->JP * RAD2DEG, 0.0f, 1.0f, 0.0f);
-
-        // Move cube center relative to pivot
-        rlTranslatef(localCenter.x, localCenter.y, localCenter.z);
-
-        //DrawCubeV(Vector3Zero(), self->dim, self->color);
-        DrawCubeWiresV(Vector3Zero(), self->dim, BLACK);
-
-    rlPopMatrix();
-
-    // Debug visuals
-    DrawSphere(protected->Start, 0.08f, RED);       // pivot/start joint
-    DrawSphere(end, 0.08f, BLUE);        // next joint/end
-    DrawLine3D(protected->Start, end, PURPLE);      // centerline
-
-    return end;
-
 }
 
 

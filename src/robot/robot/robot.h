@@ -10,9 +10,10 @@
 typedef struct Robot_protected Robot_protected;
 
 
+
 typedef struct Robot{
-    float jp_limits[NUM_LINKS][2]; // joint limits for each link [min, max]
-    float jp_velocity_limits[NUM_LINKS][2]; // velocity limits for each link [min, max]
+    float jp_limits[NUM_LINKS][3]; // joint limits for each link [min, max]
+    float jp_velocity_limits[NUM_LINKS][3]; // velocity limits for each link [min, max]
 
     Robot_protected* protected; // pointer to the protected data
 } Robot;
@@ -75,12 +76,6 @@ extern void ROBOT_set_TCP_velocity(Robot* self, Vector3 tcp_velocity_setpoint);
  */
 extern void ROBOT_update(Robot* self);
 
-/**
- * @brief Destructs the Robot instance and frees all allocated memory.
- * 
- * @param self pointer to the Robot instance
- */
-extern void ROBOT_dtor(Robot* self);    
 
 /**
  * @brief Draws the robot using raylib.
@@ -88,6 +83,15 @@ extern void ROBOT_dtor(Robot* self);
  * @param self  pointer to the Robot instance
  */
 extern void ROBOT_Draw(Robot* self);
+
+/**
+ * @brief Destructs the Robot instance and frees all allocated memory.
+ * 
+ * @param self pointer to the Robot instance
+ */
+extern void ROBOT_dtor(Robot* self);    
+
+
 
 
 #endif

@@ -1,5 +1,5 @@
 #include "Controller_private.h"
-
+#include "utils/Logger/logger.h"
 #include "utils/Exceptions_Assertions/assert.h"
 #include "utils/Exceptions_Assertions/except.h"
 #include "utils/MemAllocator/mem.h"
@@ -41,7 +41,8 @@ Controller* Controller_create(const ControllerType* type, ...)
         va_start(args, type);
 
         TRY {
-            type->vtable->ctor(self, &args);
+            LOG_DEBUG_MSG(NO_ERROR, "createing controller with Vtable->ctor");
+            self->type->vtable->ctor(self, &args);
         }
         ELSE {
             ctor_failed = 1;
@@ -53,6 +54,7 @@ Controller* Controller_create(const ControllerType* type, ...)
         END_TRY;
 
         if (ctor_failed) {
+            LOG_ERROR_MSG(1, "faild to crate controller");
             Controller_destroy(self);
 
             if (caught) {
@@ -69,7 +71,7 @@ Controller* Controller_create(const ControllerType* type, ...)
 float Controller_update(Controller* self, float x)
 {
     if (!self) {
-        RAISE(NullptrError);
+        return 0.0f;
     }
 
     assert_debug(self->type);
@@ -98,6 +100,8 @@ void Controller_reset(Controller* self)
     if (self->type->vtable->reset) {
         self->type->vtable->reset(self);
     }
+
+    LOG_INFO_MSG(NO_ERROR, "Reseting Controller");
 }
 
 void Controller_destroy(Controller* self)
@@ -106,10 +110,8 @@ void Controller_destroy(Controller* self)
         return;
     }
 
-    /*
-        Destructors should not raise exceptions.
-        They should only clean up owned resources.
-    */
+    LOG_DEBUG_MSG(NO_ERROR, "Destroying Contoller");
+
     if (self->type && self->type->vtable && self->type->vtable->dtor) {
         self->type->vtable->dtor(self);
     }

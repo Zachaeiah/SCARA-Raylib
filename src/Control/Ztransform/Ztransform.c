@@ -1,7 +1,7 @@
 #include "Ztransform.h"
 #include <stdlib.h>
 #include <string.h>
-
+#include "utils/Logger/logger.h"
 #include "utils/Exceptions_Assertions/assert.h"
 #include "utils/MemAllocator/mem.h"
 
@@ -126,6 +126,8 @@ void ZFilter_dtor(ZFilter *f)
 {
     if (!f)
         return;
+
+    LOG_DEBUG_MSG(NO_ERROR, "freeing Zfilter");
 
     FREE(f->x_hist);
     FREE(f->y_hist);

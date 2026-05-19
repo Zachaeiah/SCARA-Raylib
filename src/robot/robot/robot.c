@@ -298,10 +298,12 @@ void ROBOT_Draw(Robot* self){
     if (!self) {
         RAISE(NullptrError);
         return;
-    }
+    }       
+
+    Vector3 origin = Vector3Zero();
 
     // bace
-    LINK_Set_Start(self->protected->links[0], Vector3Zero()); // set the start position of the first link to the origin
+    LINK_Set_Pose(self->protected->links[0], &origin , NULL, NULL); // set the start position of the first link to the origin
     Vector3 end = LINK_Draw(self->protected->links[0]); // draw the first link and get the end position
 
     // link 1
