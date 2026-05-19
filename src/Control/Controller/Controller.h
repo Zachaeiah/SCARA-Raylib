@@ -11,6 +11,11 @@ typedef struct ControllerType ControllerType;
  *
  * Allocates type->size bytes and calls the controller-specific constructor.
  *
+ * @param type Pointer to the ControllerType describing the controller.
+ * @param ...  Additional arguments required by the specific controller type's constructor.
+ *             The expected arguments and their types depend on the implementation of the controller.
+ *             Refer to the documentation of the specific ControllerType for details.
+ *
  * @throw NullptrError       if type or type->vtable is NULL
  * @throw ValueError         if type->size is invalid
  * @throw NotImplementedError if required functions are missing

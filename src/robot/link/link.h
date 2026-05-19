@@ -18,9 +18,11 @@ extern "C" {
 //---------------------------- Structure Definitions ------------------------------------------------
 typedef struct Link_protected Link_protected;
 
-typedef enum Link_type{
-    REVOLUTE_LINK,   // link that rotates around Y axis
-    PRISMATIC_LINK   // link that extends and retracts along Y axis
+typedef enum Link_type {
+    BASE_LINK,
+    REVOLUTE_LINK,
+    PRISMATIC_LINK,   // optional, but do not use for link4 here
+    TCP_LINK
 } Link_type;
 
 typedef struct Link
@@ -95,6 +97,14 @@ void LINK_Set_End(Link* self, Vector3 end);
  * @param jp the JP
  */
 void LINK_Set_JP(Link* self, float jp);
+
+/**
+ * @brief Get the joint pos of the link
+ * 
+ * @param self  pointer to the link instance
+ * @return float joint pos
+ */
+float LINK_Get_JP(const Link* self);
 
 /**
  * @brief Set the world-space heading angle of the link.

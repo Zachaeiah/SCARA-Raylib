@@ -5,14 +5,14 @@
 #include "utils/Exceptions_Assertions/assert.h"
 #include "utils/MemAllocator/mem.h"
 
-const Except_t Actuator_Failed = {"Actuator faild"};
+const Except_t Actuator_Failed = {"Actuator failed"};
 
 /**
  * @brief clams float between a min and max value
  * 
  * @param value The value to be clamped
- * @param min The min value to cmap to
- * @param max The max value to camp to
+ * @param min The min value to clamp to
+ * @param max The max value to clamp to
  * @return clamped float 
  */
 static float clampf(float value, float min, float max)
@@ -29,16 +29,14 @@ static float clampf(float value, float min, float max)
  * @param Dead_Zone the dead zone threshold for the actuator
  * @param Saturation the saturation limit for the actuator output
  * @note The actuator applies a dead zone to the input, 
- * processes it through the ZFilter, and then applies s
- * aturation to the output.
+ * processes it through the ZFilter, and then applies saturation to the output.
  * 
  */
 typedef struct Actuator{
     ZFilter* filter;
     float Dead_Zone;
     float Saturation;
-
-}Actuator;
+} Actuator;
 
 /**
  * @brief Constructs a new Actuator object with the given filter coefficients and limits.
@@ -74,7 +72,7 @@ extern Actuator* Actuator_ctor(ZFilter* filter,
         RAISE(Actuator_Failed);
     }EXCEPT(NullptrError) {
         
-        printf("inputs *a || *b is NULL: %s\n", Except_frame.exception->reason);
+        printf("Actuator_ctor: filter pointer is NULL: %s\n", Except_frame.exception->reason);
         if (actuator) Actuator_dtor(actuator);
 
         // RAISE the Actuator_Failed exception to indicate 
@@ -125,14 +123,13 @@ void Actuator_reset(Actuator* self){
 
 
 /**
- * @brief Construct a new Actuator_dtor object
+ * @brief Destructs the Actuator object
  * 
- * @param self 
+ * @param self pointer to the actuator instance
  */
 void Actuator_dtor(Actuator* self){
     if (!self) return;
-
-    LOG_DEBUG_MSG(NO_ERROR, "freeing Actuator");
+    LOG_DEBUG_MSG(NO_ERROR, "freeing Actuator at pointer: %p", (void*)self);
 
     FREE(self);
 }

@@ -300,12 +300,12 @@ void ROBOT_dtor(Robot* self){
  * 
  * @param self  pointer to the Robot instance
  */
-void ROBOT_Draw(Robot* self){
-
+void ROBOT_Draw(Robot* self)
+{
     if (!self) {
         RAISE(NullptrError);
         return;
-    }       
+    }
 
     Vector3 origin = Vector3Zero();
 
@@ -314,22 +314,30 @@ void ROBOT_Draw(Robot* self){
     Link* link3 = self->protected->links[2];
     Link* link4 = self->protected->links[3];
 
-
-
-    // link1: fixed base/body
+    // link1: fixed base
     LINK_Set_Start(link1, origin);
     Vector3 end1 = LINK_Draw(link1);
 
-    // link2: rotated by joint1
+    // link2: child of base, rotated by joint1
     LINK_Set_Start(link2, end1);
     Vector3 end2 = LINK_Draw(link2);
 
-    // link3: prismatic link
+    // link3: child of link2, rotated by joint2
     LINK_Set_Start(link3, end2);
     Vector3 end3 = LINK_Draw(link3);
 
-    // link4 starts wherever link3's JP-controlled end is
-    LINK_Set_Start(link4, end3);
-    LINK_Draw(link4);
+    // joint3: prismatic transform between link3 and link4
+    float slide = LINK_Get_JP(link3);
 
+    Vector3 slideOffset = {
+        .x = 0.0f,
+        .y = -slide,
+        .z = 0.0f
+    };
+
+    Vector3 tcpStart = Vector3Add(end3, slideOffset);
+
+    // link4: passive TCP/tool body
+    LINK_Set_Start(link4, tcpStart);
+    LINK_Draw(link4);
 }

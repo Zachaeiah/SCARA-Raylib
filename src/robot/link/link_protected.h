@@ -193,4 +193,83 @@ static Vector3 LINK_Draw_prismatic(Link* self)
 
     return p->End;
 }
+
+static Vector3 LINK_Draw_base(Link* self)
+{
+    if (!self || !self->protected) {
+        RAISE(NullptrError);
+    }
+
+    Link_protected* p = self->protected;
+
+    Vector3 center = {
+        .x = p->Start.x,
+        .y = p->Start.y + self->dim.y / 2.0f,
+        .z = p->Start.z
+    };
+
+    p->End = (Vector3){
+        .x = p->Start.x,
+        .y = p->Start.y + self->dim.y,
+        .z = p->Start.z
+    };
+
+    DrawCubeWiresV(center, self->dim, BLACK);
+
+    DrawSphere(p->Start, 0.08f, RED);
+    DrawSphere(p->End, 0.08f, BLUE);
+    DrawLine3D(p->Start, p->End, PURPLE);
+
+    return p->End;
+}
+
+static Vector3 LINK_Draw_tcp(Link* self)
+{
+    if (!self || !self->protected) {
+        RAISE(NullptrError);
+    }
+
+    Link_protected* p = self->protected;
+
+    /*
+        TCP link:
+        - p->Start is the attachment point from link3
+        - cube hangs downward from p->Start
+        - cube rotates around Y using p->Heading
+        - p->End is the actual TCP point
+    */
+
+    Vector3 localCenter = {
+        .x = 0.0f,
+        .y = -self->dim.y / 2.0f,
+        .z = 0.0f
+    };
+
+    Vector3 localEnd = {
+        .x = 0.0f,
+        .y = -self->dim.y,
+        .z = 0.0f
+    };
+
+    // End point in world coordinates
+    p->End = Vector3Add(p->Start, localEnd);
+
+    rlPushMatrix();
+
+        rlTranslatef(p->Start.x, p->Start.y, p->Start.z);
+
+        // This is the missing part
+        rlRotatef(p->Heading * RAD2DEG, 0.0f, 1.0f, 0.0f);
+
+        DrawCubeWiresV(localCenter, self->dim, BLACK);
+
+    rlPopMatrix();
+
+    DrawSphere(p->Start, 0.08f, ORANGE);
+    DrawSphere(p->End, 0.08f, BLUE);
+    DrawLine3D(p->Start, p->End, PURPLE);
+
+    return p->End;
+}
+
 #endif // LINK_LINK_PROTECTED_H_

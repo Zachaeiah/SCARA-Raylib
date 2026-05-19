@@ -27,13 +27,21 @@ static Link_protected* Link_protected_ctor(Actuator* actuator, Link_type type)
     p->actuator = actuator;
 
     switch (type)
-    {
+{
+        case BASE_LINK:
+            p->draw = LINK_Draw_base;
+            break;
+
         case REVOLUTE_LINK:
             p->draw = LINK_Draw_revolute;
             break;
 
         case PRISMATIC_LINK:
             p->draw = LINK_Draw_prismatic;
+            break;
+
+        case TCP_LINK:
+            p->draw = LINK_Draw_tcp;
             break;
 
         default:
@@ -88,68 +96,62 @@ float LINK_update(Link* self, const float x_in)
 }
 
 
-void LINK_Set_Pose( Link* self, const Vector3* start, const Vector3* end, const float* jp, const float* heading)
+void LINK_Set_Pose(Link* self,
+                   const Vector3* start,
+                   const Vector3* end,
+                   const float* jp,
+                   const float* heading)
 {
-    if (!self) {
+    if (!self || !self->protected) {
         RAISE(NullptrError);
     }
 
+    Link_protected* p = self->protected;
+
     if (start) {
-        self->protected->Start = *start;
+        p->Start = *start;
     }
 
     if (end) {
-        self->protected->End = *end;
+        p->End = *end;
     }
 
     if (jp) {
-        self->protected->JP = *jp;
+        p->JP = *jp;
     }
 
-    if (heading){
-        self->protected->Heading = *heading;
+    if (heading) {
+        p->Heading = *heading;
     }
 }
 
 void LINK_Set_Start(Link* self, Vector3 start)
 {
-    
-    if (!self) {
-        RAISE(NullptrError);
-    }
-
     LINK_Set_Pose(self, &start, NULL, NULL, NULL);
 }
 
-
 void LINK_Set_End(Link* self, Vector3 end)
 {
-    
-    if (!self) {
-        RAISE(NullptrError);
-    }
-
     LINK_Set_Pose(self, NULL, &end, NULL, NULL);
 }
 
-
 void LINK_Set_JP(Link* self, float jp)
 {
-    
-    if (!self) {
-        RAISE(NullptrError);
-    }
-
     LINK_Set_Pose(self, NULL, NULL, &jp, NULL);
 }
 
 void LINK_Set_Heading(Link* self, float headingRad)
 {
-    if (!self) {
+    LINK_Set_Pose(self, NULL, NULL, NULL, &headingRad);
+}
+
+float LINK_Get_JP(const Link* self)
+{
+    if (!self || !self->protected) {
         RAISE(NullptrError);
     }
 
-    LINK_Set_Pose(self, NULL, NULL, NULL, &headingRad);
+    return self->protected->JP;
 }
 
 

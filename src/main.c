@@ -90,14 +90,14 @@ int main(void)
     actuator3 = Actuator_ctor(motor_plant3, Dead_Zone, Saturation);
 
     // setup simple links for testing
-    link1 = LINK_ctor(link1Dim, RED, REVOLUTE_LINK, actuator1);
+    link1 = LINK_ctor(link1Dim, RED, BASE_LINK, actuator1);
     link2 = LINK_ctor(link2Dim, GREEN, REVOLUTE_LINK, actuator2);
 
     // link3 owns the prismatic joint
     link3 = LINK_ctor(link3Dim, BLUE, REVOLUTE_LINK, actuator3);
 
     // link4 is just the moving tool/end link
-    link4 = LINK_ctor(link4Dim, ORANGE, PRISMATIC_LINK, NULL);
+    link4 = LINK_ctor(link4Dim, ORANGE, TCP_LINK, NULL);
 
     // setup simple P Controller for testing
     G_const1 = Controller_create(&GainController_Type, Gain);
@@ -214,11 +214,11 @@ static void Control_Update(double dt)
 
     float t = (float)GetTime();
 
-    float joint1Angle = 0.0f;
-    float joint2Angle = sinf(t * 0.1f * PI) * 90 * DEG2RAD;
+    float joint1Angle = cosf(t * 0.25f * PI) * 90.0f * DEG2RAD;
+    float joint2Angle = sinf(t * 0.25f * PI) * 90.0f * DEG2RAD;
 
-    // Distance, not angle. Range: 0.0 to 1.0
-    float joint3Distance = (sinf(t * 0.5f * PI) -1) * 1.70/2;
+    // Positive distance downward
+    float joint3Slide =  (sinf(t * 0.5f * PI) -1) * 1.70/2;
 
     float link1Heading = 0.0f;
     float link2Heading = joint1Angle;
@@ -226,16 +226,16 @@ static void Control_Update(double dt)
     float link4Heading = joint1Angle + joint2Angle;
 
     LINK_Set_Heading(link1, link1Heading);
-    LINK_Set_JP(link1, joint1Angle);
+    LINK_Set_JP(link1, 0.0f);
 
     LINK_Set_Heading(link2, link2Heading);
-    LINK_Set_JP(link2, joint2Angle);
+    LINK_Set_JP(link2, joint1Angle);
 
     LINK_Set_Heading(link3, link3Heading);
-    LINK_Set_JP(link3, 0.0f);   // link3 is revolute right now, so do not use JP for slide here
+    LINK_Set_JP(link3, joint3Slide);
 
     LINK_Set_Heading(link4, link4Heading);
-    LINK_Set_JP(link4, joint3Distance);   // link4 translates using its JP
+    LINK_Set_JP(link4, 0.0f);
 }
 
 // ---------------------------------------------------------
@@ -255,6 +255,75 @@ static void IdleTasks(void)
     // Do not block here.
 }
 
+static void DrawWorldAxes3D(float length)
+{
+    const float shaftRadius = 0.0225f;
+    const float headRadius  = 0.07f;
+    const float headLength  = 0.20f;
+
+    Vector3 origin = { 0.0f, 0.0f, 0.0f };
+
+    // X axis
+    DrawCylinderEx(
+        origin,
+        (Vector3){ length - headLength, 0.0f, 0.0f },
+        shaftRadius,
+        shaftRadius,
+        16,
+        RED
+    );
+
+    DrawCylinderEx(
+        (Vector3){ length - headLength, 0.0f, 0.0f },
+        (Vector3){ length, 0.0f, 0.0f },
+        headRadius,
+        0.0f,
+        16,
+        RED
+    );
+
+    // Y axis
+    DrawCylinderEx(
+        origin,
+        (Vector3){ 0.0f, length - headLength, 0.0f },
+        shaftRadius,
+        shaftRadius,
+        16,
+        GREEN
+    );
+
+    DrawCylinderEx(
+        (Vector3){ 0.0f, length - headLength, 0.0f },
+        (Vector3){ 0.0f, length, 0.0f },
+        headRadius,
+        0.0f,
+        16,
+        GREEN
+    );
+
+    // Z axis
+    DrawCylinderEx(
+        origin,
+        (Vector3){ 0.0f, 0.0f, length - headLength },
+        shaftRadius,
+        shaftRadius,
+        16,
+        BLUE
+    );
+
+    DrawCylinderEx(
+        (Vector3){ 0.0f, 0.0f, length - headLength },
+        (Vector3){ 0.0f, 0.0f, length },
+        headRadius,
+        0.0f,
+        16,
+        BLUE
+    );
+
+    // Origin marker
+    DrawSphere(origin, 0.12f, BLACK);
+}
+
 // ---------------------------------------------------------
 // Runs at 60 FPS
 // Put raylib drawing here.
@@ -269,23 +338,23 @@ static void UpdateDrawFrame(void)
 
         BeginMode3D(camera);
 
-            Vector3 origin = { 0.0f, 0.0f, 0.0f };
-            Vector3 x_axis = { 5.0f, 0.0f, 0.0f };
-            Vector3 y_axis = { 0.0f, 5.0f, 0.0f };
-            Vector3 z_axis = { 0.0f, 0.0f, 5.0f };
-
-            DrawLine3D(origin, x_axis, RED);
-            DrawLine3D(origin, y_axis, GREEN);
-            DrawLine3D(origin, z_axis, BLUE);
-
             DrawGrid(10, 1.0f);
+
+            DrawWorldAxes3D(5.0f);
 
             ROBOT_Draw(SCARA);
 
         EndMode3D();
 
-        DrawText("Simple scheduler", 10, 40, 20, DARKGRAY);
+        Vector2 xLabel = GetWorldToScreen((Vector3){ 5.25f, 0.0f, 0.0f }, camera);
+        Vector2 yLabel = GetWorldToScreen((Vector3){ 0.0f, 5.25f, 0.0f }, camera);
+        Vector2 zLabel = GetWorldToScreen((Vector3){ 0.0f, 0.0f, 5.25f }, camera);
 
+        DrawText("X", (int)xLabel.x, (int)xLabel.y, 24, RED);
+        DrawText("Y", (int)yLabel.x, (int)yLabel.y, 24, GREEN);
+        DrawText("Z", (int)zLabel.x, (int)zLabel.y, 24, BLUE);
+
+        DrawText("Simple scheduler", 10, 40, 20, DARKGRAY);
         DrawFPS(10, 10);
 
     EndDrawing();
