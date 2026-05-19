@@ -3,6 +3,7 @@
 #include "rlgl.h"
 #include <math.h>
 #include <stdint.h>
+#include "utils/Profiler/profiler.h"
 #include "Robot/Robot/robot.h"
 #include "Control/Controller/Controller.h"
 #include "Robot/link/link.h"
@@ -18,13 +19,17 @@
 #define SCREEN_WIDTH  1600
 #define SCREEN_HEIGHT 900
 
-#define RENDER_HZ 60.0
+#define RENDER_HZ 480.0
 #define PID_HZ    1000.0
 
 #define RENDER_DT (1.0 / RENDER_HZ)
 #define PID_DT    (1.0 / PID_HZ)
 
 #define MAX_PID_STEPS_PER_LOOP 5
+
+static ProfilerTimer prof_robot  = { "Robot Draw" };
+static ProfilerTimer prof_frame  = { "Frame" };
+static ProfilerTimer prof_control = { "Control Update" };
 
 // ---------------------------------------------------------
 // Globals
@@ -210,6 +215,8 @@ int main(void)
 // ---------------------------------------------------------
 static void Control_Update(double dt)
 {
+    PROFILER_Begin(&prof_control);
+
     (void)dt;
 
     float t = (float)GetTime();
@@ -236,6 +243,8 @@ static void Control_Update(double dt)
 
     LINK_Set_Heading(link4, link4Heading);
     LINK_Set_JP(link4, 0.0f);
+
+    PROFILER_End(&prof_control);
 }
 
 // ---------------------------------------------------------
@@ -330,7 +339,11 @@ static void DrawWorldAxes3D(float length)
 // ---------------------------------------------------------
 static void UpdateDrawFrame(void)
 {
+    PROFILER_Begin(&prof_frame);
+
+
     UpdateCamera(&camera, CAMERA_ORBITAL);
+
 
     BeginDrawing();
 
@@ -342,20 +355,18 @@ static void UpdateDrawFrame(void)
 
             DrawWorldAxes3D(5.0f);
 
+            PROFILER_Begin(&prof_robot);
             ROBOT_Draw(SCARA);
+            PROFILER_End(&prof_robot);
 
         EndMode3D();
 
-        Vector2 xLabel = GetWorldToScreen((Vector3){ 5.25f, 0.0f, 0.0f }, camera);
-        Vector2 yLabel = GetWorldToScreen((Vector3){ 0.0f, 5.25f, 0.0f }, camera);
-        Vector2 zLabel = GetWorldToScreen((Vector3){ 0.0f, 0.0f, 5.25f }, camera);
-
-        DrawText("X", (int)xLabel.x, (int)xLabel.y, 24, RED);
-        DrawText("Y", (int)yLabel.x, (int)yLabel.y, 24, GREEN);
-        DrawText("Z", (int)zLabel.x, (int)zLabel.y, 24, BLUE);
-
-        DrawText("Simple scheduler", 10, 40, 20, DARKGRAY);
-        DrawFPS(10, 10);
+        PROFILER_End(&prof_frame);
+        
+        DrawText(TextFormat("FPS: %d", GetFPS()), 10, 10, 20, DARKGRAY);
+        DrawText(TextFormat("Frame: %.3f ms", prof_frame.elapsed_ms), 10, 40, 20, DARKGRAY);
+        DrawText(TextFormat("Robot Draw: %.3f ms", prof_robot.elapsed_ms), 10, 60, 20, DARKGRAY);
+        DrawText(TextFormat("Control: %.6f ms", prof_control.elapsed_ms), 10, 90, 20, DARKGRAY);
 
     EndDrawing();
 }
