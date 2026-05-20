@@ -45,11 +45,12 @@ raylib.rc.data
 *.depend
 
 # Debug / logs
+Logs/
+Logs/log.txt
 *.log
 *.tmp
 *.bak
 *.swp
-
 # Python tools / scripts
 __pycache__/
 *.py[cod]
