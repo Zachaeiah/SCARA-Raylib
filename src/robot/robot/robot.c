@@ -197,7 +197,7 @@ void ROBOT_set_JP_target(Robot* self, Vector3 jp_setpoint){
     // set the target angles in the protected data
     self->protected->Target_state.JP = jp_setpoint;
 
-    LOG_INFO_MSG(NO_ERROR, "Robot Joint positions have be set");
+    LOG_INFO_MSG(NO_ERROR, "Robot JP target set X:%.3f, Y:%.3f, Z:%.3f", jp_setpoint.x, jp_setpoint.y, jp_setpoint.z);
 
 }
 
@@ -296,10 +296,6 @@ void ROBOT_update(Robot* self)
 
     Robot_protected* protected = self->protected;
 
-    /*
-        Position loop runs slower.
-        Velocity loop runs every ROBOT_update() call.
-    */
     if (++protected->tick_counter >= ROBOT_POS_LOOP_TICKS) {
         Robot_Position_Loop(self);
         protected->tick_counter = 0;
