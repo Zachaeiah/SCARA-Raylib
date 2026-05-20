@@ -5,9 +5,35 @@
 #include "Robot/link/link.h"
 #include "raylib.h"
 
-#define NUM_LINKS 4
-
 typedef struct Robot_protected Robot_protected;
+
+typedef enum RobotControllerIndex {
+    CTRL_J1_POS = 0,
+    CTRL_J2_POS,
+    CTRL_J3_POS,
+
+    CTRL_J1_VEL,
+    CTRL_J2_VEL,
+    CTRL_J3_VEL,
+
+    NUM_CTRLS
+} RobotControllerIndex;
+
+typedef enum RobotLinkIndex {
+    LINK1_INDEX = 0,
+    LINK2_INDEX,
+    LINK3_INDEX,
+    LINK4_INDEX,
+    NUM_LINKS
+} RobotLinkIndex;
+
+typedef enum RobotJointIndex {
+    JOINT1_INDEX = 0,
+    JOINT2_INDEX,
+    JOINT3_INDEX,
+
+    NUM_JOINTS
+} RobotJointIndex;
 
 typedef struct Robot{
     float jp_limits[NUM_LINKS][3]; // joint limits for each link [min, max]
@@ -23,7 +49,7 @@ typedef struct Robot{
  * @param links an array of pointers to the links in the robot
  * @return Robot* pointer to the constructed Robot instance
  */
-extern Robot* ROBOT_ctor(Controller** controllers, Link* links[NUM_LINKS]);
+extern Robot* ROBOT_ctor(Controller* controllers[NUM_CTRLS], Link* links[NUM_LINKS]);
 
 /**
  * @brief Sets the limits for the robot joints and links.
@@ -32,8 +58,8 @@ extern Robot* ROBOT_ctor(Controller** controllers, Link* links[NUM_LINKS]);
  * @param jp_limits the joint angle limits for each link [min, max]
  * @param jp_velocity_limits the velocity limits for each link [min, max]
  */
-extern void ROBOT_set_limits(Robot* self, float jp_limits[NUM_LINKS][2], 
-                                          float jp_velocity_limits[NUM_LINKS][2]);
+extern void ROBOT_set_limits(Robot* self, const float jp_limits[NUM_LINKS][2], 
+                                          const float jp_velocity_limits[NUM_LINKS][2]);
 
 /**
  * @brief Sets the target position for the robot to reach.
@@ -41,7 +67,7 @@ extern void ROBOT_set_limits(Robot* self, float jp_limits[NUM_LINKS][2],
  * @param self pointer to the Robot instance
  * @param jp_setpoint the target joint angles as a Vector3
  */
-extern void ROBOT_set_JP(Robot* self, Vector3 jp_setpoint);
+extern void ROBOT_set_JP_target(Robot* self, Vector3 jp_setpoint);
 
 /**
  * @brief Sets the velocity for the robot links.
@@ -49,7 +75,7 @@ extern void ROBOT_set_JP(Robot* self, Vector3 jp_setpoint);
  * @param self pointer to the Robot instance
  * @param jp_velocity_setpoint the velocity setpoint for the robot link
  */
-extern void ROBOT_set_JP_velocity(Robot* self, Vector3 jp_velocity_setpoint);
+extern void ROBOT_set_JP_velocity_target(Robot* self, Vector3 jp_velocity_setpoint);
 
 /**
  * @brief Sets the target position for the robot to reach.
@@ -65,7 +91,7 @@ extern void ROBOT_set_TCP_target(Robot* self, Vector3 tcp_setpoint);
  * @param self pointer to the Robot instance
  * @param tcp_velocity_setpoint the velocity setpoint for the robot link
  */
-extern void ROBOT_set_TCP_velocity(Robot* self, Vector3 tcp_velocity_setpoint);
+extern void ROBOT_set_TCP_velocity_target(Robot* self, Vector3 tcp_velocity_setpoint);
 
 /**
  * @brief Updates the robot state based on the current control mode and target state.

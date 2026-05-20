@@ -2,6 +2,7 @@
 #include <math.h>
 #include "utils/Exceptions_Assertions/assert.h"
 #include "utils/MemAllocator/mem.h"
+#include "utils/Logger/logger.h"
 #include "Robot_kinematics.h"
 #include "robot_protected.h"
 #include "robot.h"
@@ -9,19 +10,15 @@
 #define MIN_LIMIT_INDEX 0
 #define MAX_LIMIT_INDEX 1
 
-#define ROBOT_UPDATE_HZ        1000.0f
-#define ROBOT_UPDATE_DT        (1.0f / ROBOT_UPDATE_HZ)
+#define ROBOT_VEL_LOOP_HZ        1000.0f
+#define ROBOT_VEL_UPDATE_DT          (1.0f / ROBOT_VEL_LOOP_HZ)
 
-#define ROBOT_POS_LOOP_HZ      100.0f
-#define ROBOT_POS_LOOP_DIVIDER 10
+#define ROBOT_POS_LOOP_HZ        100.0f
+#define ROBOT_POS_LOOP_TICKS     (ROBOT_VEL_LOOP_HZ / ROBOT_POS_LOOP_HZ)
 
 #define J1_INDEX 0
 #define J2_INDEX 1
 #define J3_INDEX 2
-
-static int inRangef(float value, float min, float max) {
-    return (value >= min) && (value <= max);
-}
 
 static float clampf(float value, float min, float max)
 {
@@ -144,8 +141,8 @@ Robot* ROBOT_ctor(Controller* controllers[NUM_CTRLS], Link* links[NUM_LINKS]){
  * @param joint_angle_limits the joint angle limits for each link [min, max]
  * @param link_velocity_limits the velocity limits for each link [min, max]
  */
-void ROBOT_set_limits(Robot* self, float jp_limits[NUM_LINKS][2], 
-                                   float jp_velocity_limits[NUM_LINKS][2])
+void ROBOT_set_limits(Robot* self, const float jp_limits[NUM_LINKS][2], 
+                                   const float jp_velocity_limits[NUM_LINKS][2])
 {
     if (!self) {
         RAISE(NullptrError);
@@ -171,9 +168,12 @@ void ROBOT_set_limits(Robot* self, float jp_limits[NUM_LINKS][2],
     for (int i = 0; i < NUM_LINKS; i++) {
         self->jp_limits[i][MIN_LIMIT_INDEX] = jp_limits[i][MIN_LIMIT_INDEX];
         self->jp_limits[i][MAX_LIMIT_INDEX] = jp_limits[i][MAX_LIMIT_INDEX];
+
         self->jp_velocity_limits[i][MIN_LIMIT_INDEX] = jp_velocity_limits[i][MIN_LIMIT_INDEX];
         self->jp_velocity_limits[i][MAX_LIMIT_INDEX] = jp_velocity_limits[i][MAX_LIMIT_INDEX];
     }
+
+    LOG_INFO_MSG(NO_ERROR, "Robot Limits have be set");
 }
 
 /**
@@ -182,7 +182,7 @@ void ROBOT_set_limits(Robot* self, float jp_limits[NUM_LINKS][2],
  * @param self pointer to the Robot instance
  * @param jp_setpoint the target joint angles as a Vector3
  */
-void ROBOT_set_JP(Robot* self, Vector3 jp_setpoint){
+void ROBOT_set_JP_target(Robot* self, Vector3 jp_setpoint){
 
     if (!self) {
         RAISE(NullptrError);
@@ -197,6 +197,8 @@ void ROBOT_set_JP(Robot* self, Vector3 jp_setpoint){
     // set the target angles in the protected data
     self->protected->Target_state.JP = jp_setpoint;
 
+    LOG_INFO_MSG(NO_ERROR, "Robot Joint positions have be set");
+
 }
 
 /**
@@ -205,7 +207,7 @@ void ROBOT_set_JP(Robot* self, Vector3 jp_setpoint){
  * @param self pointer to the Robot instance
  * @param jp_velocity_setpoint the velocity setpoint for the robot link
  */
-void ROBOT_set_JP_velocity(Robot* self, Vector3 jp_velocity_setpoint){
+void ROBOT_set_JP_velocity_target(Robot* self, Vector3 jp_velocity_setpoint){
     if (!self) {
         RAISE(NullptrError);
         return;
@@ -219,6 +221,8 @@ void ROBOT_set_JP_velocity(Robot* self, Vector3 jp_velocity_setpoint){
 
     // set the target velocity in the protected data
     self->protected->Target_state.JP_velocity = (Vector3){jp_velocity_setpoint.x, jp_velocity_setpoint.y, jp_velocity_setpoint.z};
+
+    LOG_INFO_MSG(NO_ERROR, "Robot Joint velocity have be set");
 }
 
 /**
@@ -251,6 +255,8 @@ void ROBOT_set_TCP_target(Robot* self, Vector3 tcp_setpoint){
     self->protected->Target_state.TCP = tcp_setpoint;
     return;
 
+    LOG_INFO_MSG(NO_ERROR, "Robot TCP target has be updated");
+
 }
 
 /**
@@ -259,7 +265,7 @@ void ROBOT_set_TCP_target(Robot* self, Vector3 tcp_setpoint){
  * @param self pointer to the Robot instance
  * @param velocity_setpoint the velocity setpoint for the robot link
  */
-void ROBOT_set_TCP_velocity(Robot* self, Vector3 velocity_setpoint){
+void ROBOT_set_TCP_velocity_target(Robot* self, Vector3 velocity_setpoint){
 
     if (!self) {
         RAISE(NullptrError);
@@ -276,22 +282,48 @@ void ROBOT_set_TCP_velocity(Robot* self, Vector3 velocity_setpoint){
  * 
  * @param self pointer to the Robot instance
  */
-void ROBOT_update(Robot* self){
-
-    // just for testing, will implement the actual control logic later
+void ROBOT_update(Robot* self)
+{
     if (!self) {
         RAISE(NullptrError);
         return;
     }
 
-    if (self->protected->tick_counter >= ROBOT_POS_LOOP_HZ){
+    if (!self->protected) {
+        RAISE(NullptrError);
+        return;
+    }
+
+    Robot_protected* protected = self->protected;
+
+    /*
+        Position loop runs slower.
+        Velocity loop runs every ROBOT_update() call.
+    */
+    if (++protected->tick_counter >= ROBOT_POS_LOOP_TICKS) {
         Robot_Position_Loop(self);
-        self->protected->tick_counter = 0;
+        protected->tick_counter = 0;
     }
 
     Robot_Velocity_Loop(self);
 
-    self->protected->tick_counter++;
+    float link1Heading = 0.0f;
+    float link2Heading = protected->Current_state.JP.x;
+    float link3Heading = protected->Current_state.JP.x + protected->Current_state.JP.y;
+    float link4Heading = protected->Current_state.JP.x + protected->Current_state.JP.y;
+
+    // update the angles to reder
+    LINK_Set_Heading(protected->links[LINK1_INDEX], link1Heading);
+    LINK_Set_JP(protected->links[LINK1_INDEX], 0.0f);
+
+    LINK_Set_Heading(protected->links[LINK2_INDEX], link2Heading);
+    LINK_Set_JP(protected->links[LINK2_INDEX], protected->Current_state.JP.x);
+
+    LINK_Set_Heading(protected->links[LINK3_INDEX], link3Heading);
+    LINK_Set_JP(protected->links[LINK3_INDEX], protected->Current_state.JP.z);
+
+    LINK_Set_Heading(protected->links[LINK4_INDEX], link4Heading);
+    LINK_Set_JP(protected->links[LINK4_INDEX], 0.0f);
 
 }
 
@@ -364,13 +396,110 @@ void ROBOT_Draw(Robot* self)
     LINK_Draw(link4);
 }
 
-void Robot_Velocity_Loop(Robot* self){
-    
+void Robot_Velocity_Loop(Robot* self)
+{
+    if (!self) {
+        RAISE(NullptrError);
+        return;
+    }
 
+    if (!self->protected) {
+        RAISE(NullptrError);
+        return;
+    }
 
+    Robot_protected* protected = self->protected;
+
+    /*
+        Raylib Vector3 layout:
+            x, y, z
+
+        So these become:
+            JV_t[0] = Target JP_velocity.x
+            JV_t[1] = Target JP_velocity.y
+            JV_t[2] = Target JP_velocity.z
+    */
+
+    float* JV_t = (float*)&protected->Target_state.JP_velocity.x;
+    float* JV_c = (float*)&protected->Current_state.JP_velocity.x;
+    float* JP_c = (float*)&protected->Current_state.JP.x;
+
+    for (int i = 0; i < NUM_JOINTS; i++) {
+
+        Controller* ctrl = protected->controller[CTRL_J1_VEL + i];
+        Link* link = protected->links[LINK1_INDEX + i];
+
+        if (!ctrl || !link) {
+            RAISE(NullptrError);
+            return;
+        }
+
+        float velocity_setpoint = JV_t[i];
+        float measured_velocity = JV_c[i];
+
+        float velocity_error = velocity_setpoint - measured_velocity;
+
+        float actuator_cmd = Controller_update(ctrl, velocity_error);
+
+        float link_velocity = LINK_update(link, actuator_cmd);
+
+        JV_c[i] = link_velocity;
+
+        JP_c[i] += link_velocity * ROBOT_VEL_UPDATE_DT;
+
+        LINK_Set_JP(link, JP_c[i]);
+    }
 }
 
 
-void Robot_Position_Loop(Robot* self){
+void Robot_Position_Loop(Robot* self)
+{
+    if (!self) {
+        RAISE(NullptrError);
+        return;
+    }
 
+    if (!self->protected) {
+        RAISE(NullptrError);
+        return;
+    }
+
+    Robot_protected* protected = self->protected;
+
+    /*
+        JP_t[0] = Target_state.JP.x
+        JP_t[1] = Target_state.JP.y
+        JP_t[2] = Target_state.JP.z
+
+        JP_c[0] = Current_state.JP.x
+        JP_c[1] = Current_state.JP.y
+        JP_c[2] = Current_state.JP.z
+
+        JV_t[0] = Target_state.JP_velocity.x
+        JV_t[1] = Target_state.JP_velocity.y
+        JV_t[2] = Target_state.JP_velocity.z
+    */
+
+    float* JP_t = (float*)&protected->Target_state.JP.x;
+    float* JP_c = (float*)&protected->Current_state.JP.x;
+    float* JV_t = (float*)&protected->Target_state.JP_velocity.x;
+
+    for (int i = 0; i < NUM_JOINTS; i++) {
+
+        Controller* ctrl = protected->controller[CTRL_J1_POS + i];
+
+        if (!ctrl) {
+            RAISE(NullptrError);
+            return;
+        }
+
+        float position_setpoint = JP_t[i];
+        float measured_position = JP_c[i];
+
+        float position_error = position_setpoint - measured_position;
+
+        float velocity_setpoint = Controller_update(ctrl, position_error);
+
+        JV_t[i] = velocity_setpoint;
+    }
 }

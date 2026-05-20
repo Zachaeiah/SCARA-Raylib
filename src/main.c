@@ -3,6 +3,7 @@
 #include "rlgl.h"
 #include <math.h>
 #include <stdint.h>
+#include <stddef.h>
 #include "utils/Profiler/profiler.h"
 #include "Robot/Robot/robot.h"
 #include "Control/Controller/Controller.h"
@@ -19,13 +20,15 @@
 #define SCREEN_WIDTH  1600
 #define SCREEN_HEIGHT 900
 
-#define RENDER_HZ 60.0f
+#define RENDER_HZ   120.0f
 #define CTRL_FEQ    1000.0f
 
 #define RENDER_DT (1.0f / RENDER_HZ)
 #define CTRL_DT    (1.0f / CTRL_FEQ)
 
 #define MAX_PID_STEPS_PER_LOOP 5
+
+#define TEST_POSE_PERIOD_SEC 5.0
 
 static ProfilerTimer prof_robot  = { "Robot Draw" };
 static ProfilerTimer prof_frame  = { "Frame" };
@@ -66,9 +69,11 @@ Link* link4 = NULL;
 // ---------------------------------------------------------
 // Functions
 // ---------------------------------------------------------
+void Pos_Ctrl_Update(void);
 void Control_Update(void);
 void IdleTasks(void);
 void UpdateDrawFrame(void);
+void UpdateTestPoseCycle(Robot* robot, double now);
 
 // ---------------------------------------------------------
 // Main
@@ -79,12 +84,30 @@ int main(void)
        printf("Failed to initialize logger. Logging to stderr.\n");
     }
 
-    float Gain_vel = 2.0f;
-    float Gain_pos = 1.0f;
+    const float THETA_MAX = 170.0f * DEG2RAD;
+    const float DISPLACEMENT_MAX = 1.70f;
+    const float LIN_VEL = 0.5;
+    const float OMEGA_MAX = 90.0f * DEG2RAD;
+
+    float Gain_vel = 0.9f;
+    float Gain_pos = 3.0f;
     float plant_b[] = { 1.0f };
     float plant_a[] = { 1.0f };
     float Dead_Zone = 0.0f, Saturation = 12.0f;
 
+    float jp_limits[NUM_LINKS][2] = {
+        { -THETA_MAX,        THETA_MAX },
+        { -THETA_MAX,        THETA_MAX },
+        { -DISPLACEMENT_MAX, 0.0f },
+        { -DISPLACEMENT_MAX, 0.0f      }
+    };
+
+    float jp_velocity_limits[NUM_LINKS][2] = {
+        { -OMEGA_MAX, OMEGA_MAX },
+        { -OMEGA_MAX, OMEGA_MAX },
+        { -LIN_VEL,   LIN_VEL },
+        { -LIN_VEL,   LIN_VEL   }
+    };
 
     Vector3 link1Dim = { 0.35f, 1.0f, 0.35f }; // bace REVOLUTE LINK 
     Vector3 link2Dim = { 2.0f, 0.35f, 0.35f }; // link 2 REVOLUTE LINK 
@@ -127,6 +150,9 @@ int main(void)
     // setup scara robot with simple setup for testing
     SCARA = ROBOT_ctor(controllers, links);
 
+    // set joint limits
+    ROBOT_set_limits(SCARA, jp_limits, jp_velocity_limits);
+
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "SCARA simulator");
 
     camera.position = (Vector3){ 10.0f, 10.0f, 8.0f };
@@ -146,6 +172,8 @@ int main(void)
     {
         now = GetTime();
 
+        UpdateTestPoseCycle(SCARA, now);
+
         bool did_work = false;
 
         // -------------------------------------------------
@@ -155,7 +183,7 @@ int main(void)
 
         while (now >= next_pid_time)
         {
-            Control_Update();
+            Pos_Ctrl_Update();
 
             next_pid_time += CTRL_DT;
             pid_steps++;
@@ -266,6 +294,60 @@ void Control_Update(void)
     PROFILER_End(&prof_control);
 }
 
+void UpdateTestPoseCycle(Robot* robot, double now)
+{
+    /*
+        JP meaning assumed:
+            x = joint 1 angle, radians
+            y = joint 2 angle, radians
+            z = prismatic joint position
+
+        If your prismatic joint moves the opposite direction,
+        flip the signs on the z values.
+    */
+
+    float const Rad45 = PI / 4.0f;
+    float const Rad90 = PI / 2.0f;
+    float const Rad125 = (3.0f / 4.0f) * PI;
+
+    static const Vector3 test_poses[] = {
+        {  0.0f,      0.0f,       0.0f},
+        {  Rad90,     0.0f,      -1.7f},
+        { -Rad90,     0.0f,      -1.7f/2.0f},
+        {  0.0f,      0.0f,      -1.7f/2.0f},
+        {  0.0f,     -Rad90,     -0.0f},
+        {  0.0f,      Rad90,     -1.7/3},
+        {  Rad125,    Rad125,     0.0f},
+        {  Rad125,   -Rad125,    -1.7f},
+        { -Rad125,    Rad125,     0.0f},
+        { -Rad125,    -Rad125,    -1.7f},
+    };
+
+    static bool initialized = false;
+    static size_t pose_index = 0;
+    static double next_pose_time = 0.0;
+
+    if (!robot) {
+        return;
+    }
+
+    if (!initialized) {
+        ROBOT_set_JP_target(robot, test_poses[pose_index]);
+        next_pose_time = now + TEST_POSE_PERIOD_SEC;
+        initialized = true;
+        return;
+    }
+
+    if (now >= next_pose_time) {
+        pose_index = (pose_index + 1) % (sizeof(test_poses) / sizeof((test_poses)[0]));
+
+        ROBOT_set_JP_target(robot, test_poses[pose_index]);
+
+        // Resync from current time so it does not try to catch up.
+        next_pose_time = now + TEST_POSE_PERIOD_SEC;
+    }
+}
+
 // ---------------------------------------------------------
 // Runs only when PID and render are not due
 // Put low-priority background work here.
@@ -356,12 +438,16 @@ void DrawWorldAxes3D(float length)
 // Runs at 60 FPS
 // Put raylib drawing here.
 // ---------------------------------------------------------
-static void UpdateDrawFrame(void)
+void UpdateDrawFrame(void)
 {
     PROFILER_Begin(&prof_frame);
 
 
     UpdateCamera(&camera, CAMERA_ORBITAL);
+
+    float J1_rad = LINK_Get_JP(link1);
+    float J2_rad = LINK_Get_JP(link2);
+    float J3_pos = LINK_Get_JP(link3);   // prismatic joint, probably distance not angle
 
 
     BeginDrawing();
@@ -385,7 +471,11 @@ static void UpdateDrawFrame(void)
         DrawText(TextFormat("FPS: %d", GetFPS()), 10, 10, 20, DARKGRAY);
         DrawText(TextFormat("Frame: %.3f ms", prof_frame.elapsed_ms), 10, 40, 20, DARKGRAY);
         DrawText(TextFormat("Robot Draw: %.3f ms", prof_robot.elapsed_ms), 10, 60, 20, DARKGRAY);
-        DrawText(TextFormat("Control: %.6f ms", prof_control.elapsed_ms), 10, 90, 20, DARKGRAY);
+        DrawText(TextFormat("Control: %.6f ms", prof_control.elapsed_ms), 10, 80, 20, DARKGRAY);
+
+        DrawText(TextFormat("J1: %.2f deg", J1_rad * RAD2DEG), 10, 110, 20, DARKGRAY);
+        DrawText(TextFormat("J2: %.2f deg", J2_rad * RAD2DEG), 10, 130, 20, DARKGRAY);
+        DrawText(TextFormat("J3: %.3f m", J3_pos),             10, 150, 20, DARKGRAY);
 
     EndDrawing();
 }
