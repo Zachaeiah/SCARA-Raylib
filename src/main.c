@@ -306,21 +306,54 @@ void UpdateTestPoseCycle(Robot* robot, double now)
         flip the signs on the z values.
     */
 
-    float const Rad45 = PI / 4.0f;
-    float const Rad90 = PI / 2.0f;
-    float const Rad125 = (3.0f / 4.0f) * PI;
+    float const Rad30  = 30.0f  * DEG2RAD;
+    float const Rad45  = 45.0f  * DEG2RAD;
+    float const Rad90  = 90.0f  * DEG2RAD;
+    float const Rad125 = 125.0f * DEG2RAD;
+
+    float const Z_TOP = 0.0f;
+    float const Z_MID = -1.7f / 2.0f;
+    float const Z_LOW = -1.7f;
 
     static const Vector3 test_poses[] = {
-        {  0.0f,      0.0f,       0.0f},
-        {  Rad90,     0.0f,      -1.7f},
-        { -Rad90,     0.0f,      -1.7f/2.0f},
-        {  0.0f,      0.0f,      -1.7f/2.0f},
-        {  0.0f,     -Rad90,     -0.0f},
-        {  0.0f,      Rad90,     -1.7/3},
-        {  Rad125,    Rad125,     0.0f},
-        {  Rad125,   -Rad125,    -1.7f},
-        { -Rad125,    Rad125,     0.0f},
-        { -Rad125,    -Rad125,    -1.7f},
+        // Home / neutral
+        {  0.0f,    0.0f,    Z_TOP },
+        {  0.0f,    0.0f,    Z_MID },
+        {  0.0f,    0.0f,    Z_LOW },
+
+        // Joint 1 only
+        {  Rad45,   0.0f,    Z_MID },
+        { -Rad45,   0.0f,    Z_MID },
+        {  Rad90,   0.0f,    Z_LOW },
+        { -Rad90,   0.0f,    Z_LOW },
+
+        // Joint 2 only
+        {  0.0f,    Rad45,   Z_MID },
+        {  0.0f,   -Rad45,   Z_MID },
+        {  0.0f,    Rad90,   Z_LOW },
+        {  0.0f,   -Rad90,   Z_LOW },
+
+        // Same direction bends
+        {  Rad45,   Rad45,   Z_MID },
+        { -Rad45,  -Rad45,   Z_MID },
+        {  Rad90,   Rad45,   Z_LOW },
+        { -Rad90,  -Rad45,   Z_LOW },
+
+        // Opposite direction bends
+        {  Rad45,  -Rad45,   Z_MID },
+        { -Rad45,   Rad45,   Z_MID },
+        {  Rad90,  -Rad90,   Z_LOW },
+        { -Rad90,   Rad90,   Z_LOW },
+
+        // Near-limit stress tests
+        {  Rad125,  Rad125,  Z_TOP },
+        {  Rad125, -Rad125,  Z_LOW },
+        { -Rad125,  Rad125,  Z_TOP },
+        { -Rad125, -Rad125,  Z_LOW },
+
+        // Smaller smooth-motion checks
+        {  Rad30,  -Rad30,   Z_MID },
+        { -Rad30,   Rad30,   Z_MID },
     };
 
     static bool initialized = false;
