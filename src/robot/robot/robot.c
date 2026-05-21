@@ -197,7 +197,7 @@ void ROBOT_set_JP_target(Robot* self, Vector3 jp_setpoint){
     // set the target angles in the protected data
     self->protected->Target_state.JP = jp_setpoint;
 
-    LOG_INFO_MSG(NO_ERROR, "Robot JP target set X:%.3f, Y:%.3f, Z:%.3f", jp_setpoint.x, jp_setpoint.y, jp_setpoint.z);
+    LOG_INFO_MSG(NO_ERROR, "Robot JP target set JP1:%.3f, JP2:%.3f, JP3:%.3f", jp_setpoint.x, jp_setpoint.y, jp_setpoint.z);
 
 }
 

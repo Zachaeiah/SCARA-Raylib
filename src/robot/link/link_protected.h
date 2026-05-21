@@ -108,8 +108,8 @@ static Vector3 LINK_Draw_revolute(Link* self)
 
     rlPopMatrix();
 
-    DrawSphere(p->Start, 0.08f, RED);
-    DrawSphere(end, 0.08f, BLUE);
+    DrawSphere(p->Start, 0.8f, RED);
+    DrawSphere(end, 0.8f, BLUE);
     DrawLine3D(p->Start, end, PURPLE);
 
     return end;
@@ -185,9 +185,9 @@ static Vector3 LINK_Draw_prismatic(Link* self)
 
     rlPopMatrix();
 
-    DrawSphere(p->Start, 0.08f, RED);          // fixed parent point
-    DrawSphere(visualStart, 0.08f, ORANGE);    // translated top of link
-    DrawSphere(p->End, 0.08f, BLUE);           // translated end
+    DrawSphere(p->Start, 0.8f, RED);          // fixed parent point
+    DrawSphere(visualStart, 0.8f, ORANGE);    // translated top of link
+    DrawSphere(p->End, 0.8f, BLUE);           // translated end
     DrawLine3D(p->Start, visualStart, PURPLE);
     DrawLine3D(visualStart, p->End, PURPLE);
 

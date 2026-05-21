@@ -87,7 +87,7 @@ int main(void)
     const float THETA_MAX = 170.0f * DEG2RAD;
     const float DISPLACEMENT_MAX = 1.70f;
     const float LIN_VEL = 0.5;
-    const float OMEGA_MAX = 90.0f * DEG2RAD;
+    const float OMEGA_MAX = 180.0f * DEG2RAD;
 
     float Gain_vel = 0.9f;
     float Gain_pos = 3.0f;
@@ -109,10 +109,10 @@ int main(void)
         { -LIN_VEL,   LIN_VEL   }
     };
 
-    Vector3 link1Dim = { 0.35f, 1.0f, 0.35f }; // bace REVOLUTE LINK 
-    Vector3 link2Dim = { 2.0f, 0.35f, 0.35f }; // link 2 REVOLUTE LINK 
-    Vector3 link3Dim = { 1.5f, 0.35f, 0.35f }; // link 2 PRISMATIC_LINK
-    Vector3 link4Dim = { 0.35f, 1.7f, 0.35f }; // link 2 none
+    Vector3 link1Dim = { 3.5f, 10.0f, 3.5f }; // bace REVOLUTE LINK 
+    Vector3 link2Dim = { 20.0f, 3.5f, 3.5f }; // link 2 REVOLUTE LINK 
+    Vector3 link3Dim = { 15.0f, 3.5f, 3.5f }; // link 2 PRISMATIC_LINK
+    Vector3 link4Dim = { 3.5f, 17.0f, 3.5f }; // link 2 none
 
     // setup simple plands for easy testing
     motor_plant1 = ZFilter_ctor(plant_b, 1, plant_a, 1);
@@ -155,7 +155,7 @@ int main(void)
 
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "SCARA simulator");
 
-    camera.position = (Vector3){ 10.0f, 10.0f, 8.0f };
+    camera.position = (Vector3){ 50.0f, 50.0f, 10.0f };
     camera.target = (Vector3){ 0.0f, 0.0f, 0.0f };
     camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };
     camera.fovy = 60.0f;
@@ -312,8 +312,8 @@ void UpdateTestPoseCycle(Robot* robot, double now)
     float const Rad125 = 125.0f * DEG2RAD;
 
     float const Z_TOP = 0.0f;
-    float const Z_MID = -1.7f / 2.0f;
-    float const Z_LOW = -1.7f;
+    float const Z_MID = -17.0f / 2.0f;
+    float const Z_LOW = -17.0f;
 
     static const Vector3 test_poses[] = {
         // Home / neutral
@@ -489,7 +489,7 @@ void UpdateDrawFrame(void)
 
         BeginMode3D(camera);
 
-            DrawGrid(10, 1.0f);
+            DrawGrid(30, 5.0f);
 
             DrawWorldAxes3D(5.0f);
 
