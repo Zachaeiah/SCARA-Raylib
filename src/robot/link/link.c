@@ -73,26 +73,19 @@ Link* LINK_ctor(Vector3 dim, Color color, Link_type type, Actuator* actuator)
 
 float LINK_update(Link* self, const float x_in)
 {
-    if (!self) {
+    if (!self || !self->protected) {
         RAISE(NullptrError);
+        return 0.0f;
     }
 
     Link_protected* p = self->protected;
 
-    if (!p) {
-        RAISE(NullptrError);
-    }
-
-    // Passive link: directly use the input as JP
     if (!p->actuator) {
-        p->JP = x_in;
-        return p->JP;
+        return x_in;
     }
 
-    // Actuated link: actuator output becomes the joint position
-    p->JP = Actuator_update(p->actuator, x_in);
-
-    return p->JP;
+    
+    return Actuator_update(p->actuator, x_in);
 }
 
 

@@ -48,6 +48,25 @@ def make_pid(Kp, Ki, Kd, fc_d, zeta=0.707):
 
     return Kp + Ki/s + Kd * s * d_lpf
 
+def make_PIFD_zeros(a, b, K, fc_d):
+    """
+    PID from desired zero locations.
+
+    Zeros:
+        s = -a
+        s = -b
+
+    Gain:
+        K = derivative gain before filtering
+    """
+
+    Kd = K
+    Kp = K * (a + b)
+    Ki = K * a * b
+
+    print(f"Calculated PID gains: Kp={Kp:.4f}, Ki={Ki:.4f}, Kd={Kd:.4f}")
+    return make_pid(Kp, Ki, Kd, fc_d)
+
 # =========================================================
 # DISCRETIZATION
 # =========================================================
@@ -249,10 +268,10 @@ def design_velocity_loop():
     """
     G_velocity = G_motor   # plant: voltage → speed
     
-    Kp = 1.5
-    Ki = 0.9
-    Kd = 0.001
-    fc_d = 100
+    Kp = 1.0751
+    Ki = 0.0125
+    Kd = 0.0025
+    fc_d = 50
     zeta = 1
     # ------------------
 
@@ -280,8 +299,8 @@ def design_position_loop(inner_CL):
     # --- tune these ---
     Kp = 1.8
     Ki = 0.0
-    Kd = 0.001
-    fc_d = 50
+    Kd = 0.002
+    fc_d = 10
     zeta = 1
     # ------------------
 
@@ -350,6 +369,12 @@ G_velocity, C_vel, CL_vel  = design_velocity_loop()
 
 G_position, C_pos, CL_pos = design_position_loop(CL_vel)
 
+poles: np.ndarray = ctrl.poles(G_position)
+zeros: np.ndarray = ctrl.zeros(G_position)
+
+print("G_position poles:", poles)
+print("G_position zeros:", zeros)
+
 
 G_velocity_z = ctrl.c2d(G_velocity, vel_Ts, method='zoh') # plant 
 C_vel_z  = ctrl.c2d(C_vel, vel_Ts, method='tustin')       # controller
@@ -359,6 +384,8 @@ C_pos_z  = ctrl.c2d(C_pos, pos_Ts, method='tustin')       # controller
 
 CL_vel_z = closed_loop(C_vel_z, G_velocity_z)
 CL_pos_z = closed_loop(C_pos_z, G_pos_z)
+
+
 
 export_tf(C_vel_z,      "VELOCITY controller")
 export_tf(G_velocity_z, "VELOCITY plant")
@@ -370,9 +397,9 @@ export_tf(G_pos_z,      "POSITION plant")
 # step response of discretized position loop
 # ============================================================
 
-#print_loop_info("DISCRETIZED VELCITY LOOP", C_vel_z, G_velocity_z, C_vel_z*G_velocity_z, vel_Ts, sim_time=0.1, setpoint=2*np.pi, max_cmd=V_supply)
+#print_loop_info("DISCRETIZED VELCITY LOOP", C_vel_z, G_velocity_z, C_vel_z*G_velocity_z, vel_Ts, sim_time=1.0, setpoint=2*np.pi, max_cmd=V_supply)
 
-#print_loop_info("DISCRETIZED POSITION LOOP", C_pos_z, G_pos_z, C_pos_z*G_pos_z, pos_Ts, sim_time=5.0, setpoint=np.pi, max_cmd = 2*np.pi)
+# print_loop_info("DISCRETIZED POSITION LOOP", C_pos_z, G_pos_z, C_pos_z*G_pos_z, pos_Ts, sim_time=5.0, setpoint=np.pi, max_cmd = 2*np.pi)
 
 
 

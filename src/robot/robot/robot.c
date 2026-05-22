@@ -16,48 +16,82 @@
 #define ROBOT_POS_LOOP_HZ        100.0f
 #define ROBOT_POS_LOOP_TICKS     (ROBOT_VEL_LOOP_HZ / ROBOT_POS_LOOP_HZ)
 
-#define J1_INDEX 0
-#define J2_INDEX 1
-#define J3_INDEX 2
+void Robot_Velocity_Loop(Robot* self);
+void Robot_Position_Loop(Robot* self);
 
-static float clampf(float value, float min, float max)
+static void Robot_Apply_State_To_Links(Robot* self)
 {
-    if (value < min) return min;
-    if (value > max) return max;
-    return value;
-}
+    if (!self || !self->protected) {
+        RAISE(NullptrError);
+        return;
+    }
 
-static Vector3 Robot_Clamp_JP_Velocity(Robot* self, Vector3 v)
-{
-    v.x = clampf(v.x, self->jp_velocity_limits[J1_INDEX][MIN_LIMIT_INDEX],
-                      self->jp_velocity_limits[J1_INDEX][MAX_LIMIT_INDEX]);
+    Robot_protected* p = self->protected;
 
-    v.y = clampf(v.y, self->jp_velocity_limits[J2_INDEX][MIN_LIMIT_INDEX],
-                      self->jp_velocity_limits[J2_INDEX][MAX_LIMIT_INDEX]);
+    const float j1 = p->Current_state.JP.x;
+    const float j2 = p->Current_state.JP.y;
+    const float j3 = p->Current_state.JP.z;
 
-    v.z = clampf(v.z, self->jp_velocity_limits[J3_INDEX][MIN_LIMIT_INDEX],
-                      self->jp_velocity_limits[J3_INDEX][MAX_LIMIT_INDEX]);
+    /*
+        Joint meaning:
+            j1 = base/shoulder angle
+            j2 = elbow angle
+            j3 = vertical slide
+    */
 
-    return v;
+    LINK_Set_Heading(p->links[LINK1_INDEX], 0.0f);
+    LINK_Set_JP     (p->links[LINK1_INDEX], 0.0f);
+
+    LINK_Set_Heading(p->links[LINK2_INDEX], j1);
+    LINK_Set_JP     (p->links[LINK2_INDEX], j1);
+
+    LINK_Set_Heading(p->links[LINK3_INDEX], j1 + j2);
+
+    /*
+        Important:
+        link3 JP is being used by ROBOT_Draw() as the slide value.
+        So do not also treat link3 JP as joint 2.
+    */
+    LINK_Set_JP(p->links[LINK3_INDEX], j3);
+
+    LINK_Set_Heading(p->links[LINK4_INDEX], j1 + j2);
+    LINK_Set_JP     (p->links[LINK4_INDEX], 0.0f);
 }
 
 static Vector3 Robot_Clamp_JP_Position(Robot* self, Vector3 jp)
 {
-    jp.x = clampf(jp.x, self->jp_limits[J1_INDEX][MIN_LIMIT_INDEX],
+    jp.x = Clamp(jp.x, self->jp_limits[J1_INDEX][MIN_LIMIT_INDEX],
                         self->jp_limits[J1_INDEX][MAX_LIMIT_INDEX]);
 
-    jp.y = clampf(jp.y, self->jp_limits[J2_INDEX][MIN_LIMIT_INDEX],
+    jp.y = Clamp(jp.y, self->jp_limits[J2_INDEX][MIN_LIMIT_INDEX],
                         self->jp_limits[J2_INDEX][MAX_LIMIT_INDEX]);
 
-    jp.z = clampf(jp.z, self->jp_limits[J3_INDEX][MIN_LIMIT_INDEX],
+    jp.z = Clamp(jp.z, self->jp_limits[J3_INDEX][MIN_LIMIT_INDEX],
                         self->jp_limits[J3_INDEX][MAX_LIMIT_INDEX]);
 
     return jp;
 }
 
-void Robot_Velocity_Loop(Robot* self);
-void Robot_Position_Loop(Robot* self);
+/**
+ * @brief 
+ * 
+ * @param self 
+ * @param v 
+ * @return Vector3 
+ */
+static Vector3 Robot_Clamp_JP_Velocity(Robot* self, Vector3 v)
+{
+    v.x = Clamp(v.x, self->jp_velocity_limits[J1_INDEX][MIN_LIMIT_INDEX],
+                      self->jp_velocity_limits[J1_INDEX][MAX_LIMIT_INDEX]);
 
+    v.y = Clamp(v.y, self->jp_velocity_limits[J2_INDEX][MIN_LIMIT_INDEX],
+                      self->jp_velocity_limits[J2_INDEX][MAX_LIMIT_INDEX]);
+
+    v.z = Clamp(v.z, self->jp_velocity_limits[J3_INDEX][MIN_LIMIT_INDEX],
+                      self->jp_velocity_limits[J3_INDEX][MAX_LIMIT_INDEX]);
+
+    return v;
+}
 
 /**
  * @brief Constructs a new Robot instance with the given controllers and links.
@@ -276,6 +310,93 @@ void ROBOT_set_TCP_velocity_target(Robot* self, Vector3 velocity_setpoint){
     
 }
 
+/**
+ * @brief 
+ * 
+ * @param self 
+ * @return Vector3 
+ */
+Vector3 ROBOT_Get_JP(const Robot* self){
+     if (!self || !self->protected) {
+        RAISE(NullptrError);
+        return Vector3Zero();
+    }
+
+    return self->protected->Current_state.JP;
+
+}
+
+/**
+ * @brief 
+ * 
+ * @param self 
+ * @return Vector3 
+ */
+Vector3 ROBOT_Get_JP_velocity(const Robot* self){
+
+     if (!self || !self->protected) {
+        RAISE(NullptrError);
+        return Vector3Zero();
+    }
+
+    return self->protected->Current_state.JP_velocity;
+
+}
+
+/**
+ * @brief 
+ * 
+ * @param self 
+ * @param joint_index 
+ * @return float 
+ */
+float ROBOT_Get_JointPosition(const Robot* self, int joint_index){
+
+     if (!self || !self->protected) {
+        RAISE(NullptrError);
+        return 0.0f;
+    }
+
+    const Vector3 jp = self->protected->Current_state.JP;
+
+    switch (joint_index) {
+        case 0: return jp.x;
+        case 1: return jp.y;
+        case 2: return jp.z;
+        default:
+            RAISE(ValueError);
+            return 0.0f;
+    }
+
+}
+
+/**
+ * @brief 
+ * 
+ * @param self 
+ * @param joint_index 
+ * @return float 
+ */
+float ROBOT_Get_JointVelocity(const Robot* self, int joint_index){
+
+    if (!self || !self->protected) {
+        RAISE(NullptrError);
+        return 0.0f;
+    }
+
+    const Vector3 jv = self->protected->Current_state.JP_velocity;
+
+    switch (joint_index) {
+        case 0: return jv.x;
+        case 1: return jv.y;
+        case 2: return jv.z;
+        default:
+            RAISE(ValueError);
+            return 0.0f;
+    }
+
+}
+
 
 /**
  * @brief Updates the robot state based on the current control mode and target state.
@@ -294,7 +415,17 @@ void ROBOT_update(Robot* self)
         return;
     }
 
+    
+
     Robot_protected* protected = self->protected;
+
+    if (protected->mode == Angle_CONTROL_MODE){
+        
+    }
+
+    if (protected->mode == Angle_CONTROL_MODE){
+        
+    }
 
     if (++protected->tick_counter >= ROBOT_POS_LOOP_TICKS) {
         Robot_Position_Loop(self);
@@ -303,23 +434,7 @@ void ROBOT_update(Robot* self)
 
     Robot_Velocity_Loop(self);
 
-    float link1Heading = 0.0f;
-    float link2Heading = protected->Current_state.JP.x;
-    float link3Heading = protected->Current_state.JP.x + protected->Current_state.JP.y;
-    float link4Heading = protected->Current_state.JP.x + protected->Current_state.JP.y;
-
-    // update the angles to reder
-    LINK_Set_Heading(protected->links[LINK1_INDEX], link1Heading);
-    LINK_Set_JP(protected->links[LINK1_INDEX], 0.0f);
-
-    LINK_Set_Heading(protected->links[LINK2_INDEX], link2Heading);
-    LINK_Set_JP(protected->links[LINK2_INDEX], protected->Current_state.JP.x);
-
-    LINK_Set_Heading(protected->links[LINK3_INDEX], link3Heading);
-    LINK_Set_JP(protected->links[LINK3_INDEX], protected->Current_state.JP.z);
-
-    LINK_Set_Heading(protected->links[LINK4_INDEX], link4Heading);
-    LINK_Set_JP(protected->links[LINK4_INDEX], 0.0f);
+    Robot_Apply_State_To_Links(self);
 
 }
 
@@ -495,6 +610,12 @@ void Robot_Position_Loop(Robot* self)
         float position_error = position_setpoint - measured_position;
 
         float velocity_setpoint = Controller_update(ctrl, position_error);
+
+        velocity_setpoint = Clamp(
+            velocity_setpoint, 
+            self->jp_velocity_limits[i][MIN_LIMIT_INDEX], 
+            self->jp_velocity_limits[i][MAX_LIMIT_INDEX]
+        );
 
         JV_t[i] = velocity_setpoint;
     }

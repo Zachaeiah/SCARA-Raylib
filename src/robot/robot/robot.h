@@ -5,6 +5,18 @@
 #include "Robot/link/link.h"
 #include "raylib.h"
 
+#define LINK_1_INDEX 0
+#define LINK_2_INDEX 1
+#define LINK_3_INDEX 2
+#define LINK_4_INDEX 3
+
+#define J1_INDEX 0
+#define J2_INDEX 1
+#define J3_INDEX 2
+
+#define MIN_LIMIT_INDEX 0
+#define MAX_LIMIT_INDEX 1
+
 typedef struct Robot_protected Robot_protected;
 
 typedef enum RobotControllerIndex {
@@ -36,8 +48,8 @@ typedef enum RobotJointIndex {
 } RobotJointIndex;
 
 typedef struct Robot{
-    float jp_limits[NUM_LINKS][3]; // joint limits for each link [min, max]
-    float jp_velocity_limits[NUM_LINKS][3]; // velocity limits for each link [min, max]
+    float jp_limits[NUM_LINKS][2]; // joint limits for each link [min, max]
+    float jp_velocity_limits[NUM_LINKS][2]; // velocity limits for each link [min, max]
 
     Robot_protected* protected; // pointer to the protected data
 } Robot;
@@ -94,6 +106,40 @@ extern void ROBOT_set_TCP_target(Robot* self, Vector3 tcp_setpoint);
 extern void ROBOT_set_TCP_velocity_target(Robot* self, Vector3 tcp_velocity_setpoint);
 
 /**
+ * @brief 
+ * 
+ * @param self 
+ * @return Vector3 
+ */
+extern Vector3 ROBOT_Get_JP(const Robot* self);
+
+/**
+ * @brief 
+ * 
+ * @param self 
+ * @return Vector3 
+ */
+extern Vector3 ROBOT_Get_JP_velocity(const Robot* self);
+
+/**
+ * @brief 
+ * 
+ * @param self 
+ * @param joint_index 
+ * @return float 
+ */
+extern float ROBOT_Get_JointPosition(const Robot* self, int joint_index);
+
+/**
+ * @brief 
+ * 
+ * @param self 
+ * @param joint_index 
+ * @return float 
+ */
+extern float ROBOT_Get_JointVelocity(const Robot* self, int joint_index);
+
+/**
  * @brief Updates the robot state based on the current control mode and target state.
  * 
  * @param self pointer to the Robot instance
@@ -114,8 +160,5 @@ extern void ROBOT_Draw(Robot* self);
  * @param self pointer to the Robot instance
  */
 extern void ROBOT_dtor(Robot* self);    
-
-
-
 
 #endif

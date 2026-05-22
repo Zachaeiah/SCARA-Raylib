@@ -2,8 +2,11 @@
 #define ROBOT_ROBOT_KINEMATICS_H_
 
 #include "raylib.h"
-#include "robot_protected.h"
+#include "robot.h"
 
+
+#define LEFT_SOLUTION 0
+#define RIGHT_SOLUTION 1
 #define MAX_SOLUTIONS 2
 
 typedef struct FK_result{

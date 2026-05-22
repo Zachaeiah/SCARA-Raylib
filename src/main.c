@@ -9,7 +9,7 @@
 #include "Control/Controller/Controller.h"
 #include "Robot/link/link.h"
 #include "Control/Ztransform/Ztransform.h"
-#include "Control/Controllers/Simple/GainController.h"
+#include "Control/Controllers/PID_s/PID_CONT.h"
 #include "Control/Actuator/Actuator.h"
 #include "utils/Logger/logger.h"
 #include "utils/Exceptions_Assertions/except.h"
@@ -42,14 +42,32 @@ static Camera camera = { 0 };
 static Robot* SCARA;
 
 // actuator velocity controller
-Controller* G1_vel = NULL;
-Controller* G2_vel = NULL;
-Controller* G3_vel = NULL;
+Controller* PID1_vel = NULL;
+Controller* PID2_vel = NULL;
+Controller* PID3_vel = NULL;
 
 // actuator posions controller
-Controller* G1_pos = NULL;
-Controller* G2_pos = NULL;
-Controller* G3_pos = NULL;
+Controller* PID1_pos = NULL;
+Controller* PID2_pos = NULL;
+Controller* PID3_pos = NULL;
+
+// ===== VELOCITY controller =====
+#define VELOCITY_CONTROLLER_NUM_LEN 4
+#define VELOCITY_CONTROLLER_DEN_LEN 4
+static const float VELOCITY_CONTROLLER_NUM[] = { 1.16725369f, -2.73364842f, 2.04479720f, -0.47840154f };
+static const float VELOCITY_CONTROLLER_DEN[4] = { 1.00000000f, -2.45697901f, 1.98767596f, -0.53069696f };
+
+// ===== VELOCITY plant =====
+#define VELOCITY_PLANT_NUM_LEN 2
+#define VELOCITY_PLANT_DEN_LEN 3
+static const float VELOCITY_PLANT_NUM[2] = { 0.00542332f, 0.00485343f };
+static const float VELOCITY_PLANT_DEN[3] = { 1.00000000f, -1.71651923f, 0.71652265f };
+
+// ===== POSITION controller =====
+#define POSITION_CONTROLLER_NUM_LEN 3
+#define POSITION_CONTROLLER_DEN_LEN 3
+static const float POSITION_CONTROLLER_NUM[3] = { 1.82285934f, -1.87878799f, 0.46739681f };
+static const float POSITION_CONTROLLER_DEN[3] = { 1.00000000f, -1.04377111f, 0.27236453f };
 
 // motor plands
 ZFilter* motor_plant1 = NULL;
@@ -85,14 +103,11 @@ int main(void)
     }
 
     const float THETA_MAX = 170.0f * DEG2RAD;
-    const float DISPLACEMENT_MAX = 1.70f;
-    const float LIN_VEL = 0.5;
-    const float OMEGA_MAX = 180.0f * DEG2RAD;
+    const float OMEGA_MAX = 90.0f * DEG2RAD;
+    const float DISPLACEMENT_MAX = 17.00f;
+    const float LIN_VEL = 10.0;
+    
 
-    float Gain_vel = 0.9f;
-    float Gain_pos = 3.0f;
-    float plant_b[] = { 1.0f };
-    float plant_a[] = { 1.0f };
     float Dead_Zone = 0.0f, Saturation = 12.0f;
 
     float jp_limits[NUM_LINKS][2] = {
@@ -115,36 +130,39 @@ int main(void)
     Vector3 link4Dim = { 3.5f, 17.0f, 3.5f }; // link 2 none
 
     // setup simple plands for easy testing
-    motor_plant1 = ZFilter_ctor(plant_b, 1, plant_a, 1);
-    motor_plant2 = ZFilter_ctor(plant_b, 1, plant_a, 1);
-    motor_plant3 = ZFilter_ctor(plant_b, 1, plant_a, 1);
+    motor_plant1 = ZFilter_ctor(VELOCITY_PLANT_NUM, VELOCITY_PLANT_NUM_LEN, VELOCITY_PLANT_DEN, VELOCITY_PLANT_DEN_LEN);
+    motor_plant2 = ZFilter_ctor(VELOCITY_PLANT_NUM, VELOCITY_PLANT_NUM_LEN, VELOCITY_PLANT_DEN, VELOCITY_PLANT_DEN_LEN);
+    motor_plant3 = ZFilter_ctor(VELOCITY_PLANT_NUM, VELOCITY_PLANT_NUM_LEN, VELOCITY_PLANT_DEN, VELOCITY_PLANT_DEN_LEN);
 
     // setup simple actuator for testing
     actuator1 = Actuator_ctor(motor_plant1, Dead_Zone, Saturation);
     actuator2 = Actuator_ctor(motor_plant2, Dead_Zone, Saturation);
     actuator3 = Actuator_ctor(motor_plant3, Dead_Zone, Saturation);
 
-    // setup simple links for testing
+    // Base visual. Does not represent J1 directly.
     link1 = LINK_ctor(link1Dim, RED, BASE_LINK, actuator1);
+
+    // Arm 1 visual. Render heading is derived from J1.
     link2 = LINK_ctor(link2Dim, GREEN, REVOLUTE_LINK, actuator2);
 
-    // link3 owns the prismatic joint
+    // Arm 2 visual. Render heading is derived from J1 + J2.
+    // Its JP cache is used only as the J3 slide value for drawing.
     link3 = LINK_ctor(link3Dim, BLUE, REVOLUTE_LINK, actuator3);
 
-    // link4 is just the moving tool/end link
+    // TCP/tool visual. Offset from link3 by J3.
     link4 = LINK_ctor(link4Dim, ORANGE, TCP_LINK, NULL);
 
     // P controller for actuator velocity
-    G1_vel = Controller_create(&GainController_Type, Gain_vel);
-    G2_vel = Controller_create(&GainController_Type, Gain_vel);
-    G3_vel = Controller_create(&GainController_Type, Gain_vel);
+    PID1_vel = Controller_create(&PIDController_Type, VELOCITY_CONTROLLER_NUM, VELOCITY_CONTROLLER_NUM_LEN, VELOCITY_CONTROLLER_DEN, VELOCITY_CONTROLLER_DEN_LEN);
+    PID2_vel = Controller_create(&PIDController_Type, VELOCITY_CONTROLLER_NUM, VELOCITY_CONTROLLER_NUM_LEN, VELOCITY_CONTROLLER_DEN, VELOCITY_CONTROLLER_DEN_LEN);
+    PID3_vel = Controller_create(&PIDController_Type, VELOCITY_CONTROLLER_NUM, VELOCITY_CONTROLLER_NUM_LEN, VELOCITY_CONTROLLER_DEN, VELOCITY_CONTROLLER_DEN_LEN);
 
     // P controller for actuator posion
-    G1_pos = Controller_create(&GainController_Type, Gain_pos);
-    G2_pos = Controller_create(&GainController_Type, Gain_pos);
-    G3_pos = Controller_create(&GainController_Type, Gain_pos);
+    PID1_pos = Controller_create(&PIDController_Type, POSITION_CONTROLLER_NUM, POSITION_CONTROLLER_NUM_LEN, POSITION_CONTROLLER_DEN, POSITION_CONTROLLER_DEN_LEN);
+    PID2_pos = Controller_create(&PIDController_Type, POSITION_CONTROLLER_NUM, POSITION_CONTROLLER_NUM_LEN, POSITION_CONTROLLER_DEN, POSITION_CONTROLLER_DEN_LEN);
+    PID3_pos = Controller_create(&PIDController_Type, POSITION_CONTROLLER_NUM, POSITION_CONTROLLER_NUM_LEN, POSITION_CONTROLLER_DEN, POSITION_CONTROLLER_DEN_LEN);
 
-    Controller* controllers[] = {G1_pos, G2_pos, G3_pos, G1_vel, G2_vel, G3_vel,};
+    Controller* controllers[] = {PID1_pos, PID2_pos, PID3_pos, PID1_vel, PID2_vel, PID3_vel,};
     Link* links[NUM_LINKS] = {link1, link2, link3, link4};
     
     // setup scara robot with simple setup for testing
@@ -228,13 +246,13 @@ int main(void)
 
     ROBOT_dtor(SCARA);
 
-    Controller_destroy(G1_vel);
-    Controller_destroy(G2_vel);
-    Controller_destroy(G3_vel);
+    Controller_destroy(PID1_vel);
+    Controller_destroy(PID2_vel);
+    Controller_destroy(PID3_vel);
 
-    Controller_destroy(G1_pos);
-    Controller_destroy(G2_pos);
-    Controller_destroy(G3_pos);
+    Controller_destroy(PID1_pos);
+    Controller_destroy(PID2_pos);
+    Controller_destroy(PID3_pos);
 
     LINK_dtor(link1);
     LINK_dtor(link2);
@@ -317,33 +335,33 @@ void UpdateTestPoseCycle(Robot* robot, double now)
 
     static const Vector3 test_poses[] = {
         // Home / neutral
-        {  0.0f,    0.0f,    Z_TOP },
-        {  0.0f,    0.0f,    Z_MID },
-        {  0.0f,    0.0f,    Z_LOW },
+        {  Rad30,    0.0f,     Z_TOP },
+        {  Rad30,    Rad30,    Z_TOP },
+        {  Rad30,    Rad30,    Z_LOW },
 
         // Joint 1 only
-        {  Rad45,   0.0f,    Z_MID },
-        { -Rad45,   0.0f,    Z_MID },
-        {  Rad90,   0.0f,    Z_LOW },
+        {  Rad45,   0.0f,    Z_TOP },
+        { -Rad45,   0.0f,    Z_LOW },
+        {  Rad90,   0.0f,    Z_TOP },
         { -Rad90,   0.0f,    Z_LOW },
 
         // Joint 2 only
-        {  0.0f,    Rad45,   Z_MID },
+        {  0.0f,    Rad45,   Z_LOW },
         {  0.0f,   -Rad45,   Z_MID },
         {  0.0f,    Rad90,   Z_LOW },
-        {  0.0f,   -Rad90,   Z_LOW },
+        {  0.0f,   -Rad90,   Z_MID },
 
         // Same direction bends
-        {  Rad45,   Rad45,   Z_MID },
+        {  Rad45,   Rad45,   Z_TOP },
         { -Rad45,  -Rad45,   Z_MID },
-        {  Rad90,   Rad45,   Z_LOW },
-        { -Rad90,  -Rad45,   Z_LOW },
+        {  Rad90,   Rad45,   Z_TOP },
+        { -Rad90,  -Rad45,   Z_MID },
 
         // Opposite direction bends
-        {  Rad45,  -Rad45,   Z_MID },
-        { -Rad45,   Rad45,   Z_MID },
+        {  Rad45,  -Rad45,   Z_LOW },
+        { -Rad45,   Rad45,   Z_LOW },
         {  Rad90,  -Rad90,   Z_LOW },
-        { -Rad90,   Rad90,   Z_LOW },
+        { -Rad90,   Rad90,   Z_MID },
 
         // Near-limit stress tests
         {  Rad125,  Rad125,  Z_TOP },
@@ -400,9 +418,9 @@ void IdleTasks(void)
 
 void DrawWorldAxes3D(float length)
 {
-    const float shaftRadius = 0.0225f;
-    const float headRadius  = 0.07f;
-    const float headLength  = 0.20f;
+    const float shaftRadius = 0.225f;
+    const float headRadius  = 0.7f;
+    const float headLength  = 2.20f;
 
     Vector3 origin = { 0.0f, 0.0f, 0.0f };
 
@@ -478,9 +496,11 @@ void UpdateDrawFrame(void)
 
     UpdateCamera(&camera, CAMERA_ORBITAL);
 
-    float J1_rad = LINK_Get_JP(link1);
-    float J2_rad = LINK_Get_JP(link2);
-    float J3_pos = LINK_Get_JP(link3);   // prismatic joint, probably distance not angle
+    Vector3 jp = ROBOT_Get_JP(SCARA);
+
+    float J1_rad = jp.x;
+    float J2_rad = jp.y;
+    float J3_pos = jp.z;
 
 
     BeginDrawing();
@@ -491,7 +511,7 @@ void UpdateDrawFrame(void)
 
             DrawGrid(30, 5.0f);
 
-            DrawWorldAxes3D(5.0f);
+            DrawWorldAxes3D(50.0f);
 
             PROFILER_Begin(&prof_robot);
             ROBOT_Draw(SCARA);
