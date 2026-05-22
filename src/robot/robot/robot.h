@@ -1,109 +1,114 @@
 #ifndef ROBOT_ROBOT_H_
 #define ROBOT_ROBOT_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "Control/Controller/Controller.h"
 #include "Robot/link/link.h"
 #include "raylib.h"
 
-#define LINK_1_INDEX 0
-#define LINK_2_INDEX 1
-#define LINK_3_INDEX 2
-#define LINK_4_INDEX 3
-
-#define J1_INDEX 0
-#define J2_INDEX 1
-#define J3_INDEX 2
-
-#define MIN_LIMIT_INDEX 0
-#define MAX_LIMIT_INDEX 1
-
-typedef struct Robot_protected Robot_protected;
+typedef struct Robot Robot;
 
 typedef enum RobotControllerIndex {
-    CTRL_J1_POS = 0,
-    CTRL_J2_POS,
-    CTRL_J3_POS,
+    ROBOT_CTRL_J1_POS = 0,
+    ROBOT_CTRL_J2_POS,
+    ROBOT_CTRL_J3_POS,
 
-    CTRL_J1_VEL,
-    CTRL_J2_VEL,
-    CTRL_J3_VEL,
+    ROBOT_CTRL_J1_VEL,
+    ROBOT_CTRL_J2_VEL,
+    ROBOT_CTRL_J3_VEL,
 
-    NUM_CTRLS
+    ROBOT_NUM_CTRLS
 } RobotControllerIndex;
 
 typedef enum RobotLinkIndex {
-    LINK1_INDEX = 0,
-    LINK2_INDEX,
-    LINK3_INDEX,
-    LINK4_INDEX,
-    NUM_LINKS
+    ROBOT_LINK_1 = 0,
+    ROBOT_LINK_2,
+    ROBOT_LINK_3,
+    ROBOT_LINK_4,
+
+    ROBOT_NUM_LINKS
 } RobotLinkIndex;
 
 typedef enum RobotJointIndex {
-    JOINT1_INDEX = 0,
-    JOINT2_INDEX,
-    JOINT3_INDEX,
+    ROBOT_JOINT_1 = 0,
+    ROBOT_JOINT_2,
+    ROBOT_JOINT_3,
 
-    NUM_JOINTS
+    ROBOT_NUM_JOINTS
 } RobotJointIndex;
 
-typedef struct Robot{
-    float jp_limits[NUM_LINKS][2]; // joint limits for each link [min, max]
-    float jp_velocity_limits[NUM_LINKS][2]; // velocity limits for each link [min, max]
+typedef enum RobotLimitIndex {
+    ROBOT_LIMIT_MIN = 0,
+    ROBOT_LIMIT_MAX,
 
-    Robot_protected* protected; // pointer to the protected data
-} Robot;
-
-/**
- * @brief Constructs a new Robot instance with the given controllers and links.
- * 
- * @param controllers an array of pointers to the controllers for each link
- * @param links an array of pointers to the links in the robot
- * @return Robot* pointer to the constructed Robot instance
- */
-extern Robot* ROBOT_ctor(Controller* controllers[NUM_CTRLS], Link* links[NUM_LINKS]);
+    ROBOT_NUM_LIMITS
+} RobotLimitIndex;
 
 /**
- * @brief Sets the limits for the robot joints and links.
+ * @brief 
  * 
- * @param self pointer to the Robot instance
- * @param jp_limits the joint angle limits for each link [min, max]
- * @param jp_velocity_limits the velocity limits for each link [min, max]
+ * @param controllers 
+ * @param links 
+ * @return Robot* 
  */
-extern void ROBOT_set_limits(Robot* self, const float jp_limits[NUM_LINKS][2], 
-                                          const float jp_velocity_limits[NUM_LINKS][2]);
+Robot* ROBOT_Create(Controller* controllers[ROBOT_NUM_CTRLS],
+                    Link* links[ROBOT_NUM_LINKS]);
+
 
 /**
- * @brief Sets the target position for the robot to reach.
+ * @brief 
  * 
- * @param self pointer to the Robot instance
- * @param jp_setpoint the target joint angles as a Vector3
+ * @param self 
  */
-extern void ROBOT_set_JP_target(Robot* self, Vector3 jp_setpoint);
+void ROBOT_Destroy(Robot* self);
 
 /**
- * @brief Sets the velocity for the robot links.
+ * @brief 
  * 
- * @param self pointer to the Robot instance
- * @param jp_velocity_setpoint the velocity setpoint for the robot link
+ * @param self 
+ * @param joint_position_limits 
+ * @param joint_velocity_limits 
  */
-extern void ROBOT_set_JP_velocity_target(Robot* self, Vector3 jp_velocity_setpoint);
+void ROBOT_SetJointLimits(
+    Robot* self,
+    const float joint_position_limits[ROBOT_NUM_JOINTS][ROBOT_NUM_LIMITS],
+    const float joint_velocity_limits[ROBOT_NUM_JOINTS][ROBOT_NUM_LIMITS]
+);
 
 /**
- * @brief Sets the target position for the robot to reach.
+ * @brief 
  * 
- * @param self pointer to the Robot instance
- * @param tcp_setpoint the target position as a Vector3
+ * @param self 
+ * @param joint_position_target 
  */
-extern void ROBOT_set_TCP_target(Robot* self, Vector3 tcp_setpoint);
+void ROBOT_SetJointPositionTarget(Robot* self, Vector3 joint_position_target);
 
 /**
- * @brief Sets the velocity for the robot links.
+ * @brief 
  * 
- * @param self pointer to the Robot instance
- * @param tcp_velocity_setpoint the velocity setpoint for the robot link
+ * @param self 
+ * @param joint_velocity_target 
  */
-extern void ROBOT_set_TCP_velocity_target(Robot* self, Vector3 tcp_velocity_setpoint);
+void ROBOT_SetJointVelocityTarget(Robot* self, Vector3 joint_velocity_target);
+
+/**
+ * @brief 
+ * 
+ * @param self 
+ * @param tcp_position_target 
+ */
+void ROBOT_SetTCPPositionTarget(Robot* self, Vector3 tcp_position_target);
+
+/**
+ * @brief 
+ * 
+ * @param self 
+ * @param tcp_velocity_target 
+ */
+void ROBOT_SetTCPVelocityTarget(Robot* self, Vector3 tcp_velocity_target);
 
 /**
  * @brief 
@@ -111,7 +116,7 @@ extern void ROBOT_set_TCP_velocity_target(Robot* self, Vector3 tcp_velocity_setp
  * @param self 
  * @return Vector3 
  */
-extern Vector3 ROBOT_Get_JP(const Robot* self);
+Vector3 ROBOT_GetJointPosition(const Robot* self);
 
 /**
  * @brief 
@@ -119,46 +124,78 @@ extern Vector3 ROBOT_Get_JP(const Robot* self);
  * @param self 
  * @return Vector3 
  */
-extern Vector3 ROBOT_Get_JP_velocity(const Robot* self);
+Vector3 ROBOT_GetJointVelocity(const Robot* self);
 
 /**
  * @brief 
  * 
  * @param self 
- * @param joint_index 
+ * @param joint 
  * @return float 
  */
-extern float ROBOT_Get_JointPosition(const Robot* self, int joint_index);
+float ROBOT_GetJointPositionAt(const Robot* self, RobotJointIndex joint);
 
 /**
  * @brief 
  * 
  * @param self 
- * @param joint_index 
+ * @param joint 
  * @return float 
  */
-extern float ROBOT_Get_JointVelocity(const Robot* self, int joint_index);
+float ROBOT_GetJointVelocityAt(const Robot* self, RobotJointIndex joint);
 
 /**
- * @brief Updates the robot state based on the current control mode and target state.
+ * @brief 
  * 
- * @param self pointer to the Robot instance
+ * @param self 
+ * @return Vector3 
  */
-extern void ROBOT_update(Robot* self);
-
-
-/**
- * @brief Draws the robot using raylib.
- * 
- * @param self  pointer to the Robot instance
- */
-extern void ROBOT_Draw(Robot* self);
+Vector3 ROBOT_GetTCPPosition(const Robot* self);
 
 /**
- * @brief Destructs the Robot instance and frees all allocated memory.
+ * @brief 
  * 
- * @param self pointer to the Robot instance
+ * @param self 
+ * @return Vector3 
  */
-extern void ROBOT_dtor(Robot* self);    
+Vector3 ROBOT_GetTCPVelocity(const Robot* self);
+
+/**
+ * @brief 
+ * 
+ * @param self 
+ * @param dt 
+ */
+void ROBOT_Update(Robot* self, float dt);
+
+/**
+ * @brief 
+ * 
+ * @param self 
+ */
+void ROBOT_Draw(Robot* self);
+
+static RobotLinkIndex LinkIndexFromJoint(RobotJointIndex joint)
+{
+    switch (joint) {
+        case ROBOT_JOINT_1:
+            return ROBOT_LINK_2;   // link2 is J1 arm
+
+        case ROBOT_JOINT_2:
+            return ROBOT_LINK_3;   // link3 is J2 arm
+
+        case ROBOT_JOINT_3:
+            return ROBOT_LINK_4;   // link4 is J3 prismatic
+
+        default:
+            RAISE(ValueError);
+            return ROBOT_LINK_2;
+    }
+}
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -1,5 +1,7 @@
 #include "robot_kinematics.h"
-#include "robot_protected.h"
+#include "robot_internal.h"
+#include "robot.h"
+#include "raymath.h"
 
 #include <string.h>
 
@@ -15,8 +17,8 @@
  */
 static int joint_in_range(Robot* robot, int link_index, float value)
 {
-    return value >= robot->jp_limits[link_index][MIN_LIMIT_INDEX] &&
-           value <= robot->jp_limits[link_index][MAX_LIMIT_INDEX];
+    return value >= robot->joint_position_limits[link_index][ROBOT_LIMIT_MIN] &&
+           value <= robot->joint_position_limits[link_index][ROBOT_LIMIT_MAX];
 }
 
 /**
@@ -28,9 +30,9 @@ static int joint_in_range(Robot* robot, int link_index, float value)
  */
 static int jp_in_range(Robot* robot, Vector3 jp)
 {
-    return joint_in_range(robot, LINK_2_INDEX, jp.x) &&
-           joint_in_range(robot, LINK_3_INDEX, jp.y) &&
-           joint_in_range(robot, LINK_4_INDEX, jp.z);
+    return joint_in_range(robot, ROBOT_LINK_2, jp.x) &&
+           joint_in_range(robot, ROBOT_LINK_3, jp.y) &&
+           joint_in_range(robot, ROBOT_LINK_4, jp.z);
 }
 
 FK_result ROBOT_forward_kinematics(Robot* robot, Vector3 target_JP)
@@ -40,28 +42,35 @@ FK_result ROBOT_forward_kinematics(Robot* robot, Vector3 target_JP)
         .reachable = 0
     };
 
-    if (!robot || !robot->protected) {
+    if (!robot) {
         return result;
     }
 
-    Link* link2 = robot->protected->links[LINK_2_INDEX];
-    Link* link3 = robot->protected->links[LINK_3_INDEX];
-    Link* link4 = robot->protected->links[LINK_4_INDEX];
+
+    Link* link2 = robot->links[ROBOT_LINK_2];
+    Link* link3 = robot->links[ROBOT_LINK_3];
+    Link* link4 = robot->links[ROBOT_LINK_4];
 
     if (!link2 || !link3 || !link4) {
         return result;
     }
 
+    Vector3 Link2_dim = LINK_GetDimensions(link2);
+    Vector3 Link3_dim = LINK_GetDimensions(link3);
+    Vector3 Link4_dim = LINK_GetDimensions(link4);
+
+    
+
     const float q1 = target_JP.x;
     const float q2 = target_JP.y;
     const float q3 = target_JP.z;
 
-    const float l1 = link2->dim.x;
-    const float l2 = link3->dim.x;
+    const float l1 = Link2_dim.x;
+    const float l2 = Link3_dim.x;
 
     result.TCP.x = l1 * sinf(q1) + l2 * sinf(q1 + q2);
     result.TCP.z = l1 * cosf(q1) + l2 * cosf(q1 + q2);
-    result.TCP.y = link2->dim.y + link3->dim.y + link4->dim.y + q3;
+    result.TCP.y = Link2_dim.y + Link3_dim.y + Link4_dim.y + q3;
 
     result.reachable = jp_in_range(robot, target_JP);
 
@@ -73,20 +82,23 @@ IK_result ROBOT_inverse_kinematics(Robot* robot, Vector3 target_TCP)
 {
     IK_result result = {0};
 
-    if (!robot || !robot->protected) {
+    if (!robot ) {
         return result;
     }
 
-    Link* link2 = robot->protected->links[LINK_2_INDEX];
-    Link* link3 = robot->protected->links[LINK_3_INDEX];
-    Link* link4 = robot->protected->links[LINK_4_INDEX];
+    Link* link2 = robot->links[ROBOT_LINK_2];
+    Link* link3 = robot->links[ROBOT_LINK_3];
+    Link* link4 = robot->links[ROBOT_LINK_4];
 
     if (!link2 || !link3 || !link4) {
         return result;
     }
 
-    const float l1 = link2->dim.x;
-    const float l2 = link3->dim.x;
+    Vector3 Link2_dim = LINK_GetDimensions(link2);
+    Vector3 Link3_dim = LINK_GetDimensions(link3);
+
+    const float l1 = Link2_dim.x;
+    const float l2 = Link3_dim.x;
 
     /*
         FK uses:
@@ -110,10 +122,9 @@ IK_result ROBOT_inverse_kinematics(Robot* robot, Vector3 target_TCP)
         return result;
     }
 
-    const float base_height = link2->dim.y + link3->dim.y + link4->dim.y;
-    const float q3 = target_TCP.y - base_height;
+    const float q3 = target_TCP.y;
 
-    if (!joint_in_range(robot, LINK_4_INDEX, q3)) {
+    if (!joint_in_range(robot, ROBOT_LINK_4, q3)) {
         return result;
     }
 

@@ -1,176 +1,219 @@
 #include "Link.h"
-#include "link_protected.h"
-#include "Control/Actuator/Actuator.h"
+#include "link_internal.h"
+
 #include "utils/Exceptions_Assertions/assert.h"
 #include "utils/Exceptions_Assertions/except.h"
 #include "utils/MemAllocator/mem.h"
 
 #include "raylib.h"
 #include "raymath.h"
-#include "rlgl.h"
 
 #include <math.h>
 
-//---------------------------- Structure Definitions ------------------------------------------------
 
-static Link_protected* Link_protected_ctor(Actuator* actuator, Link_type type)
+Link* LINK_Create(Vector3 dimensions, Color color, LinkType type, Actuator* actuator)
 {
-    Link_protected* p;
+    if (Vector3Length(dimensions) <= 0.001f) {
+        RAISE(ValueError);
+        return NULL;
+    }
 
-    NEW0(p);
+    Link* self = NULL;
+    NEW0(self);
 
-    p->Start = Vector3Zero();
-    p->End = Vector3Zero();
-    p->JP = 0.0f;
-    p->Heading = 0.0f;
-    p->type = type;
-    p->actuator = actuator;
+    self->color = color;
+    self->dimensions = dimensions;
 
-    switch (type)
-{
-        case BASE_LINK:
-            p->draw = LINK_Draw_base;
+    self->start_world = Vector3Zero();
+    self->end_world = Vector3Zero();
+
+    self->joint_position = 0.0f;
+    self->heading_world_rad = 0.0f;
+
+    self->type = type;
+    self->actuator = actuator;
+
+    switch (type) {
+        case LINK_BASE:
+            self->draw = LINK_RenderBase;
             break;
 
-        case REVOLUTE_LINK:
-            p->draw = LINK_Draw_revolute;
+        case LINK_REVOLUTE:
+            self->draw = LINK_RenderRevolute;
             break;
 
-        case PRISMATIC_LINK:
-            p->draw = LINK_Draw_prismatic;
+        case LINK_PRISMATIC:
+            self->draw = LINK_RenderPrismatic;
             break;
 
-        case TCP_LINK:
-            p->draw = LINK_Draw_tcp;
+        case LINK_TCP:
+            self->draw = LINK_RenderTCP;
             break;
 
         default:
-            FREE(p);
+            FREE(self);
             RAISE(ValueError);
-            break;
+            return NULL;
     }
 
-    return p;
-}
-
-
-Link* LINK_ctor(Vector3 dim, Color color, Link_type type, Actuator* actuator)
-{
-    Link* self = NULL;
-
-    if (Vector3Length(dim) <= 0.001f) {
-        RAISE(ValueError);
-    }
-    
-    NEW(self);
-
-    self->color = color;
-    self->dim = dim;
-    self->protected = Link_protected_ctor(actuator, type);
-    
     return self;
 }
 
-float LINK_update(Link* self, const float x_in)
+
+float LINK_UpdateActuator(Link* self, float command)
 {
-    if (!self || !self->protected) {
+    if (!self) {
         RAISE(NullptrError);
         return 0.0f;
     }
 
-    Link_protected* p = self->protected;
-
-    if (!p->actuator) {
-        return x_in;
+    if (!self->actuator) {
+        return 0.0f;
     }
 
-    
-    return Actuator_update(p->actuator, x_in);
+    return Actuator_update(self->actuator, command);
 }
 
-
-void LINK_Set_Pose(Link* self,
-                   const Vector3* start,
-                   const Vector3* end,
-                   const float* jp,
-                   const float* heading)
+void LINK_IntegrateJointPosition(Link* self, float joint_velocity, float dt)
 {
-    if (!self || !self->protected) {
+    if (!self) {
         RAISE(NullptrError);
+        return;
     }
 
-    Link_protected* p = self->protected;
-
-    if (start) {
-        p->Start = *start;
+    if (dt <= 0.0f) {
+        RAISE(ValueError);
+        return;
     }
 
-    if (end) {
-        p->End = *end;
-    }
+    switch (self->type) {
+        case LINK_REVOLUTE:
+        case LINK_PRISMATIC:
+            self->joint_position += joint_velocity * dt;
+            break;
 
-    if (jp) {
-        p->JP = *jp;
-    }
+        case LINK_BASE:
+        case LINK_TCP:
+            break;
 
-    if (heading) {
-        p->Heading = *heading;
+        default:
+            RAISE(ValueError);
+            return;
     }
 }
 
-void LINK_Set_Start(Link* self, Vector3 start)
+void LINK_SetJointPosition(Link* self, float joint_position)
 {
-    LINK_Set_Pose(self, &start, NULL, NULL, NULL);
-}
-
-void LINK_Set_End(Link* self, Vector3 end)
-{
-    LINK_Set_Pose(self, NULL, &end, NULL, NULL);
-}
-
-void LINK_Set_JP(Link* self, float jp)
-{
-    LINK_Set_Pose(self, NULL, NULL, &jp, NULL);
-}
-
-void LINK_Set_Heading(Link* self, float headingRad)
-{
-    LINK_Set_Pose(self, NULL, NULL, NULL, &headingRad);
-}
-
-float LINK_Get_JP(const Link* self)
-{
-    if (!self || !self->protected) {
+    if (!self) {
         RAISE(NullptrError);
+        return;
     }
 
-    return self->protected->JP;
+    self->joint_position = joint_position;
 }
 
+float LINK_GetJointPosition(const Link* self)
+{
+    if (!self) {
+        RAISE(NullptrError);
+        return 0.0f;
+    }
+
+    return self->joint_position;
+}
+
+void LINK_SetStart(Link* self, Vector3 start_world)
+{
+    if (!self) {
+        RAISE(NullptrError);
+        return;
+    }
+
+    self->start_world = start_world;
+}
+
+void LINK_SetEnd(Link* self, Vector3 end_world)
+{
+    if (!self) {
+        RAISE(NullptrError);
+        return;
+    }
+
+    self->end_world = end_world;
+}
+
+void LINK_SetHeadingWorld(Link* self, float heading_world_rad)
+{
+    if (!self) {
+        RAISE(NullptrError);
+        return;
+    }
+
+    self->heading_world_rad = heading_world_rad;
+}
+
+Vector3 LINK_GetStart(const Link* self)
+{
+    if (!self) {
+        RAISE(NullptrError);
+        return Vector3Zero();
+    }
+
+    return self->start_world;
+}
+
+Vector3 LINK_GetEnd(const Link* self)
+{
+    if (!self) {
+        RAISE(NullptrError);
+        return Vector3Zero();
+    }
+
+    return self->end_world;
+}
+
+float LINK_GetHeadingWorld(const Link* self)
+{
+    if (!self) {
+        RAISE(NullptrError);
+        return 0.0f;
+    }
+
+    return self->heading_world_rad;
+}
+
+Vector3 LINK_GetDimensions(const Link* self){
+    if (!self) {
+        RAISE(NullptrError);
+        return Vector3Zero();
+    }
+
+    return self->dimensions;
+
+}
 
 Vector3 LINK_Draw(Link* self)
 {
     if (!self) {
         RAISE(NullptrError);
+        return Vector3Zero();
     }
 
-    return self->protected->draw(self);
+    if (!self->draw) {
+        RAISE(NullptrError);
+        return Vector3Zero();
+    }
+
+    return self->draw(self);
 }
 
-void LINK_dtor(Link* self)
+void LINK_Destroy(Link* self)
 {
     if (!self) {
-        RAISE(NullptrError);
+        return;
     }
-
-    if (self->protected) {
-        FREE(self->protected);
-    }
-
-    
 
     FREE(self);
-    return;
 }
 
 

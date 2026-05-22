@@ -110,18 +110,16 @@ int main(void)
 
     float Dead_Zone = 0.0f, Saturation = 12.0f;
 
-    float jp_limits[NUM_LINKS][2] = {
-        { -THETA_MAX,        THETA_MAX },
-        { -THETA_MAX,        THETA_MAX },
-        { -DISPLACEMENT_MAX, 0.0f },
-        { -DISPLACEMENT_MAX, 0.0f      }
+    float jp_limits[ROBOT_NUM_JOINTS][ROBOT_NUM_LIMITS] = {
+        { -THETA_MAX,        THETA_MAX },  // J1 revolute
+        { -THETA_MAX,        THETA_MAX },  // J2 revolute
+        { 0.0, DISPLACEMENT_MAX      }   // J3 prismatic, negative is downward
     };
 
-    float jp_velocity_limits[NUM_LINKS][2] = {
-        { -OMEGA_MAX, OMEGA_MAX },
-        { -OMEGA_MAX, OMEGA_MAX },
-        { -LIN_VEL,   LIN_VEL },
-        { -LIN_VEL,   LIN_VEL   }
+    float jp_velocity_limits[ROBOT_NUM_JOINTS][ROBOT_NUM_LIMITS] = {
+        { -OMEGA_MAX, OMEGA_MAX },  // J1 rad/s
+        { -OMEGA_MAX, OMEGA_MAX },  // J2 rad/s
+        { -LIN_VEL,   LIN_VEL   }   // J3 linear units/s
     };
 
     Vector3 link1Dim = { 3.5f, 10.0f, 3.5f }; // bace REVOLUTE LINK 
@@ -139,18 +137,17 @@ int main(void)
     actuator2 = Actuator_ctor(motor_plant2, Dead_Zone, Saturation);
     actuator3 = Actuator_ctor(motor_plant3, Dead_Zone, Saturation);
 
-    // Base visual. Does not represent J1 directly.
-    link1 = LINK_ctor(link1Dim, RED, BASE_LINK, actuator1);
+    // Base visual only. No actuator.
+    link1 = LINK_Create(link1Dim, RED, LINK_BASE, NULL);
 
-    // Arm 1 visual. Render heading is derived from J1.
-    link2 = LINK_ctor(link2Dim, GREEN, REVOLUTE_LINK, actuator2);
+    // Joint 1 actuator drives arm 1.
+    link2 = LINK_Create(link2Dim, GREEN, LINK_REVOLUTE, actuator1);
 
-    // Arm 2 visual. Render heading is derived from J1 + J2.
-    // Its JP cache is used only as the J3 slide value for drawing.
-    link3 = LINK_ctor(link3Dim, BLUE, REVOLUTE_LINK, actuator3);
+    // Joint 2 actuator drives arm 2.
+    link3 = LINK_Create(link3Dim, BLUE, LINK_REVOLUTE, actuator2);
 
-    // TCP/tool visual. Offset from link3 by J3.
-    link4 = LINK_ctor(link4Dim, ORANGE, TCP_LINK, NULL);
+    // Joint 3 actuator drives vertical prismatic tool slide.
+    link4 = LINK_Create(link4Dim, ORANGE, LINK_PRISMATIC, actuator3);
 
     // P controller for actuator velocity
     PID1_vel = Controller_create(&PIDController_Type, VELOCITY_CONTROLLER_NUM, VELOCITY_CONTROLLER_NUM_LEN, VELOCITY_CONTROLLER_DEN, VELOCITY_CONTROLLER_DEN_LEN);
@@ -163,13 +160,13 @@ int main(void)
     PID3_pos = Controller_create(&PIDController_Type, POSITION_CONTROLLER_NUM, POSITION_CONTROLLER_NUM_LEN, POSITION_CONTROLLER_DEN, POSITION_CONTROLLER_DEN_LEN);
 
     Controller* controllers[] = {PID1_pos, PID2_pos, PID3_pos, PID1_vel, PID2_vel, PID3_vel,};
-    Link* links[NUM_LINKS] = {link1, link2, link3, link4};
+    Link* links[ROBOT_NUM_LINKS] = {link1, link2, link3, link4};
     
     // setup scara robot with simple setup for testing
-    SCARA = ROBOT_ctor(controllers, links);
+    SCARA = ROBOT_Create(controllers, links);
 
     // set joint limits
-    ROBOT_set_limits(SCARA, jp_limits, jp_velocity_limits);
+    ROBOT_SetJointLimits(SCARA, jp_limits, jp_velocity_limits);
 
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "SCARA simulator");
 
@@ -199,7 +196,7 @@ int main(void)
         // -------------------------------------------------
         int pid_steps = 0;
 
-        while (now >= next_pid_time)
+        while (now >= next_pid_time && pid_steps < MAX_PID_STEPS_PER_LOOP)
         {
             Pos_Ctrl_Update();
 
@@ -208,7 +205,6 @@ int main(void)
             did_work = true;
         }
 
-        // If PID falls too far behind, resync instead of spiraling.
         if (pid_steps >= MAX_PID_STEPS_PER_LOOP)
         {
             next_pid_time = now + CTRL_DT;
@@ -244,7 +240,7 @@ int main(void)
         }
     }
 
-    ROBOT_dtor(SCARA);
+    ROBOT_Destroy(SCARA);
 
     Controller_destroy(PID1_vel);
     Controller_destroy(PID2_vel);
@@ -254,14 +250,18 @@ int main(void)
     Controller_destroy(PID2_pos);
     Controller_destroy(PID3_pos);
 
-    LINK_dtor(link1);
-    LINK_dtor(link2);
+    LINK_Destroy(link1);
+    LINK_Destroy(link2);
+    LINK_Destroy(link3);
+    LINK_Destroy(link4);
 
     Actuator_dtor(actuator1);
     Actuator_dtor(actuator2);
+    Actuator_dtor(actuator3);
 
     ZFilter_dtor(motor_plant1);
     ZFilter_dtor(motor_plant2);
+    ZFilter_dtor(motor_plant3);
 
     Logger_shutdown();
 
@@ -272,7 +272,7 @@ int main(void)
 }
 
 void Pos_Ctrl_Update(void){
-    ROBOT_update(SCARA);
+    ROBOT_Update(SCARA, CTRL_DT);
 }
 
 
@@ -297,17 +297,17 @@ void Control_Update(void)
     float link3Heading = joint1Angle + joint2Angle;
     float link4Heading = joint1Angle + joint2Angle;
 
-    LINK_Set_Heading(link1, link1Heading);
-    LINK_Set_JP(link1, 0.0f);
+    LINK_SetHeadingWorld(link1, link1Heading);
+    LINK_SetJointPosition(link1, 0.0f);
 
-    LINK_Set_Heading(link2, link2Heading);
-    LINK_Set_JP(link2, joint1Angle);
+    LINK_SetHeadingWorld(link2, link2Heading);
+    LINK_SetJointPosition(link2, joint1Angle);
 
-    LINK_Set_Heading(link3, link3Heading);
-    LINK_Set_JP(link3, joint3Slide);
+    LINK_SetHeadingWorld(link3, link3Heading);
+    LINK_SetJointPosition(link3, joint3Slide);
 
-    LINK_Set_Heading(link4, link4Heading);
-    LINK_Set_JP(link4, 0.0f);
+    LINK_SetHeadingWorld(link4, link4Heading);
+    LINK_SetJointPosition(link4, 0.0f);
 
     PROFILER_End(&prof_control);
 }
@@ -330,8 +330,8 @@ void UpdateTestPoseCycle(Robot* robot, double now)
     float const Rad125 = 125.0f * DEG2RAD;
 
     float const Z_TOP = 0.0f;
-    float const Z_MID = -17.0f / 2.0f;
-    float const Z_LOW = -17.0f;
+    float const Z_MID = 17.0f / 2.0f;
+    float const Z_LOW = 17.0f;
 
     static const Vector3 test_poses[] = {
         // Home / neutral
@@ -383,7 +383,7 @@ void UpdateTestPoseCycle(Robot* robot, double now)
     }
 
     if (!initialized) {
-        ROBOT_set_JP_target(robot, test_poses[pose_index]);
+        ROBOT_SetJointPositionTarget(robot, test_poses[pose_index]);
         next_pose_time = now + TEST_POSE_PERIOD_SEC;
         initialized = true;
         return;
@@ -392,7 +392,7 @@ void UpdateTestPoseCycle(Robot* robot, double now)
     if (now >= next_pose_time) {
         pose_index = (pose_index + 1) % (sizeof(test_poses) / sizeof((test_poses)[0]));
 
-        ROBOT_set_JP_target(robot, test_poses[pose_index]);
+        ROBOT_SetJointPositionTarget(robot, test_poses[pose_index]);
 
         // Resync from current time so it does not try to catch up.
         next_pose_time = now + TEST_POSE_PERIOD_SEC;
@@ -493,10 +493,9 @@ void UpdateDrawFrame(void)
 {
     PROFILER_Begin(&prof_frame);
 
-
     UpdateCamera(&camera, CAMERA_ORBITAL);
 
-    Vector3 jp = ROBOT_Get_JP(SCARA);
+    Vector3 jp = ROBOT_GetJointPosition(SCARA);
 
     float J1_rad = jp.x;
     float J2_rad = jp.y;
