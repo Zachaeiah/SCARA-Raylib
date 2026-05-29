@@ -268,12 +268,18 @@ def design_velocity_loop():
     """
     G_velocity = G_motor   # plant: voltage → speed
     
-    Kp = 1.0751
-    Ki = 0.0125
-    Kd = 0.0025
-    fc_d = 50
+    # Kp = 1.0751
+    # Ki = 0.0125
+    # Kd = 0.0025
+    # fc_d = 50
+    # zeta = 1
+    # # ------------------
+
+    Kp = 1.5711
+    Ki = 0.0214
+    Kd = 0.0053
+    fc_d = 30
     zeta = 1
-    # ------------------
 
     C_vel = make_pid(Kp, Ki, Kd, fc_d, zeta)
 
@@ -387,11 +393,11 @@ CL_pos_z = closed_loop(C_pos_z, G_pos_z)
 
 
 
-export_tf(C_vel_z,      "VELOCITY controller")
-export_tf(G_velocity_z, "VELOCITY plant")
+# export_tf(C_vel_z,      "VELOCITY controller")
+# export_tf(G_velocity_z, "VELOCITY plant")
 
-export_tf(C_pos_z,      "POSITION controller")
-export_tf(G_pos_z,      "POSITION plant")
+# export_tf(C_pos_z,      "POSITION controller")
+# export_tf(G_pos_z,      "POSITION plant")
 
 # ============================================================
 # step response of discretized position loop
@@ -399,7 +405,7 @@ export_tf(G_pos_z,      "POSITION plant")
 
 #print_loop_info("DISCRETIZED VELCITY LOOP", C_vel_z, G_velocity_z, C_vel_z*G_velocity_z, vel_Ts, sim_time=1.0, setpoint=2*np.pi, max_cmd=V_supply)
 
-# print_loop_info("DISCRETIZED POSITION LOOP", C_pos_z, G_pos_z, C_pos_z*G_pos_z, pos_Ts, sim_time=5.0, setpoint=np.pi, max_cmd = 2*np.pi)
+print_loop_info("DISCRETIZED POSITION LOOP", C_pos_z, G_pos_z, C_pos_z*G_pos_z, pos_Ts, sim_time=5.0, setpoint=np.pi, max_cmd = 2*np.pi)
 
 
 

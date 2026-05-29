@@ -33,6 +33,24 @@ static float Vector3GetByJoint(Vector3 v, RobotJointIndex joint)
     }
 }
 
+static RobotLinkIndex LinkIndexFromJoint(RobotJointIndex joint)
+{
+    switch (joint) {
+        case ROBOT_JOINT_1:
+            return ROBOT_LINK_2;   // link2 is J1 arm
+
+        case ROBOT_JOINT_2:
+            return ROBOT_LINK_3;   // link3 is J2 arm
+
+        case ROBOT_JOINT_3:
+            return ROBOT_LINK_4;   // link4 is J3 prismatic
+
+        default:
+            RAISE(ValueError);
+            return ROBOT_LINK_2;
+    }
+}
+
 static void Vector3SetByJoint(Vector3* v, RobotJointIndex joint, float value)
 {
     if (!v) {
@@ -98,6 +116,26 @@ static void ROBOT_ReadJointState(Robot* self)
 
         float joint_position = LINK_GetJointPosition(self->links[link_index]);
         Vector3SetByJoint(&self->current.joint_position, joint, joint_position);
+    }
+}
+
+static void ROBOT_ResetPositionControllers(Robot* self)
+{
+    for (int i = 0; i < ROBOT_NUM_JOINTS; i++) {
+        RobotJointIndex joint = (RobotJointIndex)i;
+        RobotControllerIndex ctrl_index = PositionControllerFromJoint(joint);
+
+        Controller_reset(self->controllers[ctrl_index]);
+    }
+}
+
+static void ROBOT_ResetVelocityControllers(Robot* self)
+{
+    for (int i = 0; i < ROBOT_NUM_JOINTS; i++) {
+        RobotJointIndex joint = (RobotJointIndex)i;
+        RobotControllerIndex ctrl_index = VelocityControllerFromJoint(joint);
+
+        Controller_reset(self->controllers[ctrl_index]);
     }
 }
 
@@ -293,6 +331,86 @@ Vector3 ROBOT_GetTCPVelocity(const Robot* self)
     return self->current.tcp_velocity;
 }
 
+void ROBOT_HandleModeChange(Robot* self)
+{
+    if (self->mode == self->previous_mode) {
+        return;
+    }
+
+    ROBOT_ReadJointState(self);
+
+    switch (self->mode) {
+        case ROBOT_MODE_IDLE:
+            ROBOT_ResetPositionControllers(self);
+            ROBOT_ResetVelocityControllers(self);
+
+            self->target.joint_velocity = Vector3Zero();
+            self->target.joint_position = self->current.joint_position;
+            self->position_loop_counter = 0u;
+            break;
+
+        case ROBOT_MODE_JOINT_POSITION:
+            /*
+                Entering joint position mode.
+
+                Force the position loop to run immediately so the velocity
+                command does not use stale velocity-mode data.
+            */
+            ROBOT_ResetPositionControllers(self);
+            ROBOT_ResetVelocityControllers(self);
+
+            self->target.joint_velocity = Vector3Zero();
+            self->position_loop_counter = 0u;
+            break;
+
+        case ROBOT_MODE_JOINT_VELOCITY:
+            /*
+                Entering joint velocity mode.
+
+                Position target is frozen to current position so that when
+                you later switch back to position mode, the old position target
+                is not accidentally reused unless you explicitly set it again.
+            */
+            ROBOT_ResetPositionControllers(self);
+
+            self->target.joint_position = self->current.joint_position;
+            self->position_loop_counter = 0u;
+            break;
+
+        case ROBOT_MODE_TCP_POSITION:
+            /*
+                Future behavior:
+                    TCP position target -> IK / resolved-rate control
+                    -> joint velocity targets -> velocity loop
+            */
+            ROBOT_ResetPositionControllers(self);
+            ROBOT_ResetVelocityControllers(self);
+
+            self->target.joint_velocity = Vector3Zero();
+            self->position_loop_counter = 0u;
+            break;
+
+        case ROBOT_MODE_TCP_VELOCITY:
+            /*
+                Future behavior:
+                    TCP velocity target -> Jacobian inverse
+                    -> joint velocity targets -> velocity loop
+            */
+            ROBOT_ResetPositionControllers(self);
+            ROBOT_ResetVelocityControllers(self);
+
+            self->target.joint_velocity = Vector3Zero();
+            self->position_loop_counter = 0u;
+            break;
+
+        default:
+            RAISE(ValueError);
+            break;
+    }
+
+    self->previous_mode = self->mode;
+}
+
 
 void ROBOT_Update(Robot* self, float dt)
 {
@@ -306,30 +424,69 @@ void ROBOT_Update(Robot* self, float dt)
         return;
     }
 
-    if (self->mode == ROBOT_MODE_IDLE) {
-        ROBOT_ReadJointState(self);
-        return;
+    ROBOT_HandleModeChange(self);
+
+    switch (self->mode) {
+        case ROBOT_MODE_IDLE:
+            ROBOT_ReadJointState(self);
+            return;
+
+        case ROBOT_MODE_JOINT_POSITION:
+            /*
+                Position loop runs slower.
+                Velocity loop runs every update.
+            */
+            if (self->position_loop_counter == 0u) {
+                ROBOT_PositionLoop(self);
+            }
+
+            ROBOT_VelocityLoop(self, dt);
+
+            self->position_loop_counter++;
+
+            if (self->position_loop_counter >= ROBOT_POSITION_LOOP_DIVIDER) {
+                self->position_loop_counter = 0u;
+            }
+
+            return;
+
+        case ROBOT_MODE_JOINT_VELOCITY:
+            /*
+                Velocity mode only runs the velocity loop.
+                User/code is responsible for setting target.joint_velocity.
+            */
+            ROBOT_VelocityLoop(self, dt);
+            return;
+
+        case ROBOT_MODE_TCP_POSITION:
+            /*
+                Future implementation:
+                    ROBOT_TCPPositionLoop(self);
+                    ROBOT_VelocityLoop(self, dt);
+
+                For now, do not run velocity loop because stale joint velocity
+                targets could move the robot unintentionally.
+            */
+            ROBOT_ReadJointState(self);
+            return;
+
+        case ROBOT_MODE_TCP_VELOCITY:
+            /*
+                Future implementation:
+                    ROBOT_TCPVelocityLoop(self);
+                    ROBOT_VelocityLoop(self, dt);
+
+                For now, do not run velocity loop because TCP velocity mapping
+                is not implemented yet.
+            */
+            ROBOT_ReadJointState(self);
+            return;
+
+        default:
+            RAISE(ValueError);
+            return;
     }
-
-    if (self->position_loop_counter >= ROBOT_POSITION_LOOP_DIVIDER) {
-        ROBOT_PositionLoop(self);
-        self->position_loop_counter = 0u;
-    }
-
-    ROBOT_VelocityLoop(self, dt);
-
-    self->position_loop_counter++;
 }
-
-void ROBOT_Destroy(Robot* self)
-{
-    if (!self) {
-        return;
-    }
-
-    FREE(self);
-}
-
 
 void ROBOT_Draw(Robot* self)
 {
@@ -473,4 +630,13 @@ void ROBOT_PositionLoop(Robot* self)
 
         Vector3SetByJoint(&self->target.joint_velocity, joint, velocity_command);
     }
+}
+
+void ROBOT_Destroy(Robot* self)
+{
+    if (!self) {
+        return;
+    }
+
+    FREE(self);
 }

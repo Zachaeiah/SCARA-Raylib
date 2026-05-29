@@ -16,19 +16,6 @@ Kt       = 1.5         # V/Rad
 b        = 0.001       # NM/Rad  
 V_supply = 12          #V
 
-# ============================================================
-# system responce requirments 
-# ============================================================
-
-Overshoot = 5      # %
-SettlingTime = 0.5  # s
-
-dampRatio = -math.log(Overshoot/100)/math.sqrt((math.pi**2) + (math.log(Overshoot/100)**2))
-naturalFreq = math.log(0.02)/(dampRatio*SettlingTime)
-
-P_desired_p: complex = -naturalFreq*dampRatio + 1j*naturalFreq*math.sqrt(1-dampRatio**2)
-P_desired_m: complex = -naturalFreq*dampRatio - 1j*naturalFreq*math.sqrt(1-dampRatio**2)
-
 s = ctrl.TransferFunction.s
 
 # ============================================================
@@ -426,12 +413,14 @@ zeros: np.ndarray = ctrl.zeros(G)
 print("Plant poles:", poles)
 print("Plant zeros:", zeros)
 
-a = 0.000
-b = -1.20845921e-02
-k = 0.02
+a = 1.20845921e-02
+b = 0.0
+k = 0.0453
 print(f"Desired zeros at s={-a:.6f} and s={-b:.6f} with gain K={k:.6f}\n")
 
 controller, Kp, Ki, Kd = make_PIFD_zeros(a=a, b=b, K=k, fc_d=10)
+
+#plot_OL_RL(G*controller)
 
 # Increase Kp
 # raises the whole magnitude plot
@@ -439,7 +428,7 @@ controller, Kp, Ki, Kd = make_PIFD_zeros(a=a, b=b, K=k, fc_d=10)
 # makes response faster
 # reduces phase margin
 # can increase overshoot
-Kp += 0.0
+Kp -= 0.00015
 
 
 # Increase Ki
@@ -447,7 +436,7 @@ Kp += 0.0
 # removes steady-state error
 # adds phase lag
 # can make the system oscillate
-Ki += 0.0005
+Ki += 0.0001
 
 # Increase Kd
 # adds phase lead
@@ -480,5 +469,6 @@ controller = make_PIFD_gains(Kp, Ki, Kd, fc_d = fc_d)
 # Closed-loop analysis
 # ============================================================
 
-print_loop_info("DISCRETIZED VELCITY LOOP", controller, G, pos_Ts, sim_time=5.0, setpoint=np.pi, max_cmd=2*np.pi)
+#print_loop_info("DISCRETIZED VELCITY LOOP", controller, G, vel_Ts, sim_time=1.0, setpoint=2*np.pi, max_cmd=12)
+print_loop_info("DISCRETIZED POSION LOOP", controller, G, pos_Ts, sim_time=5.0, setpoint=np.pi, max_cmd=2*np.pi)
 

@@ -54,7 +54,7 @@ typedef enum RobotLimitIndex {
  * @param links 
  * @return Robot* 
  */
-Robot* ROBOT_Create(Controller* controllers[ROBOT_NUM_CTRLS],
+extern Robot* ROBOT_Create(Controller* controllers[ROBOT_NUM_CTRLS],
                     Link* links[ROBOT_NUM_LINKS]);
 
 
@@ -63,7 +63,7 @@ Robot* ROBOT_Create(Controller* controllers[ROBOT_NUM_CTRLS],
  * 
  * @param self 
  */
-void ROBOT_Destroy(Robot* self);
+extern void ROBOT_Destroy(Robot* self);
 
 /**
  * @brief 
@@ -72,7 +72,7 @@ void ROBOT_Destroy(Robot* self);
  * @param joint_position_limits 
  * @param joint_velocity_limits 
  */
-void ROBOT_SetJointLimits(
+extern void ROBOT_SetJointLimits(
     Robot* self,
     const float joint_position_limits[ROBOT_NUM_JOINTS][ROBOT_NUM_LIMITS],
     const float joint_velocity_limits[ROBOT_NUM_JOINTS][ROBOT_NUM_LIMITS]
@@ -84,7 +84,7 @@ void ROBOT_SetJointLimits(
  * @param self 
  * @param joint_position_target 
  */
-void ROBOT_SetJointPositionTarget(Robot* self, Vector3 joint_position_target);
+extern void ROBOT_SetJointPositionTarget(Robot* self, Vector3 joint_position_target);
 
 /**
  * @brief 
@@ -92,7 +92,7 @@ void ROBOT_SetJointPositionTarget(Robot* self, Vector3 joint_position_target);
  * @param self 
  * @param joint_velocity_target 
  */
-void ROBOT_SetJointVelocityTarget(Robot* self, Vector3 joint_velocity_target);
+extern void ROBOT_SetJointVelocityTarget(Robot* self, Vector3 joint_velocity_target);
 
 /**
  * @brief 
@@ -100,7 +100,7 @@ void ROBOT_SetJointVelocityTarget(Robot* self, Vector3 joint_velocity_target);
  * @param self 
  * @param tcp_position_target 
  */
-void ROBOT_SetTCPPositionTarget(Robot* self, Vector3 tcp_position_target);
+extern void ROBOT_SetTCPPositionTarget(Robot* self, Vector3 tcp_position_target);
 
 /**
  * @brief 
@@ -108,7 +108,7 @@ void ROBOT_SetTCPPositionTarget(Robot* self, Vector3 tcp_position_target);
  * @param self 
  * @param tcp_velocity_target 
  */
-void ROBOT_SetTCPVelocityTarget(Robot* self, Vector3 tcp_velocity_target);
+extern void ROBOT_SetTCPVelocityTarget(Robot* self, Vector3 tcp_velocity_target);
 
 /**
  * @brief 
@@ -116,7 +116,7 @@ void ROBOT_SetTCPVelocityTarget(Robot* self, Vector3 tcp_velocity_target);
  * @param self 
  * @return Vector3 
  */
-Vector3 ROBOT_GetJointPosition(const Robot* self);
+extern Vector3 ROBOT_GetJointPosition(const Robot* self);
 
 /**
  * @brief 
@@ -124,7 +124,7 @@ Vector3 ROBOT_GetJointPosition(const Robot* self);
  * @param self 
  * @return Vector3 
  */
-Vector3 ROBOT_GetJointVelocity(const Robot* self);
+extern Vector3 ROBOT_GetJointVelocity(const Robot* self);
 
 /**
  * @brief 
@@ -133,7 +133,7 @@ Vector3 ROBOT_GetJointVelocity(const Robot* self);
  * @param joint 
  * @return float 
  */
-float ROBOT_GetJointPositionAt(const Robot* self, RobotJointIndex joint);
+extern float ROBOT_GetJointPositionAt(const Robot* self, RobotJointIndex joint);
 
 /**
  * @brief 
@@ -142,7 +142,7 @@ float ROBOT_GetJointPositionAt(const Robot* self, RobotJointIndex joint);
  * @param joint 
  * @return float 
  */
-float ROBOT_GetJointVelocityAt(const Robot* self, RobotJointIndex joint);
+extern float ROBOT_GetJointVelocityAt(const Robot* self, RobotJointIndex joint);
 
 /**
  * @brief 
@@ -150,7 +150,7 @@ float ROBOT_GetJointVelocityAt(const Robot* self, RobotJointIndex joint);
  * @param self 
  * @return Vector3 
  */
-Vector3 ROBOT_GetTCPPosition(const Robot* self);
+extern Vector3 ROBOT_GetTCPPosition(const Robot* self);
 
 /**
  * @brief 
@@ -158,7 +158,7 @@ Vector3 ROBOT_GetTCPPosition(const Robot* self);
  * @param self 
  * @return Vector3 
  */
-Vector3 ROBOT_GetTCPVelocity(const Robot* self);
+extern Vector3 ROBOT_GetTCPVelocity(const Robot* self);
 
 /**
  * @brief 
@@ -166,33 +166,21 @@ Vector3 ROBOT_GetTCPVelocity(const Robot* self);
  * @param self 
  * @param dt 
  */
-void ROBOT_Update(Robot* self, float dt);
+extern void ROBOT_Update(Robot* self, float dt);
 
 /**
  * @brief 
  * 
  * @param self 
  */
-void ROBOT_Draw(Robot* self);
+extern void ROBOT_Draw(Robot* self);
 
-static RobotLinkIndex LinkIndexFromJoint(RobotJointIndex joint)
-{
-    switch (joint) {
-        case ROBOT_JOINT_1:
-            return ROBOT_LINK_2;   // link2 is J1 arm
-
-        case ROBOT_JOINT_2:
-            return ROBOT_LINK_3;   // link3 is J2 arm
-
-        case ROBOT_JOINT_3:
-            return ROBOT_LINK_4;   // link4 is J3 prismatic
-
-        default:
-            RAISE(ValueError);
-            return ROBOT_LINK_2;
-    }
-}
-
+/**
+ * @brief 
+ * 
+ * @param self 
+ */
+extern void ROBOT_HandleModeChange(Robot* self);
 
 #ifdef __cplusplus
 }

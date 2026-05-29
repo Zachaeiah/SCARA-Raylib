@@ -24,6 +24,7 @@ struct Robot {
     Controller* controllers[ROBOT_NUM_CTRLS];
 
     RobotMode mode;
+    RobotMode previous_mode;
 
     RobotState current;
     RobotState target;
