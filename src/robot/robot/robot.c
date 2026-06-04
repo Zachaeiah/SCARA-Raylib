@@ -21,25 +21,6 @@ void ROBOT_VelocityLoop(Robot* self, float dt);
 void ROBOT_PositionLoop(Robot* self);
 
 /** 
- * @brief Gets the value of a Vector3 component based on the joint index.
- * @param v The Vector3 struct.
- * @param joint The joint index.
- * @return The value of the specified component.
- */
-static float Vector3GetByJoint(Vector3 v, RobotJointIndex joint)
-{
-    switch (joint) {
-        case ROBOT_JOINT_1: return v.x;
-        case ROBOT_JOINT_2: return v.y;
-        case ROBOT_JOINT_3: return v.z;
-
-        default:
-            RAISE(ValueError);
-            return 0.0f;
-    }
-}
-
-/** 
  * @brief Converts a joint index to a link index.
  * @param joint The joint index.
  * @return The corresponding link index.
@@ -59,38 +40,6 @@ static RobotLinkIndex LinkIndexFromJoint(RobotJointIndex joint)
         default:
             RAISE(ValueError);
             return ROBOT_LINK_2;
-    }
-}
-
-/** 
- * @brief Sets the value of a Vector3 component based on the joint index.
- * @param v A pointer to the Vector3 struct.
- * @param joint The joint index.
- * @param value The value to set.
- */
-static void Vector3SetByJoint(Vector3* v, RobotJointIndex joint, float value)
-{
-    if (!v) {
-        RAISE(NullptrError);
-        return;
-    }
-
-    switch (joint) {
-        case ROBOT_JOINT_1:
-            v->x = value;
-            break;
-
-        case ROBOT_JOINT_2:
-            v->y = value;
-            break;
-
-        case ROBOT_JOINT_3:
-            v->z = value;
-            break;
-
-        default:
-            RAISE(ValueError);
-            break;
     }
 }
 
@@ -267,27 +216,6 @@ void ROBOT_SetJointLimits(
 }
 
 
-Vector3 ROBOT_ApplyJointVelocityLimits(Robot* self){
-    if (!self) {
-        RAISE(NullptrError);
-        return Vector3Zero();
-    }
-
-    Vector3 limited_velocity = self->current.joint_velocity;
-
-    for (int i = 0; i < ROBOT_NUM_JOINTS; i++) {
-        float vel_min = self->joint_velocity_limits[i][ROBOT_LIMIT_MIN];
-        float vel_max = self->joint_velocity_limits[i][ROBOT_LIMIT_MAX];
-
-        Vector3SetByJoint(&limited_velocity, (RobotJointIndex)i,
-            Clamp(Vector3GetByJoint(self->current.joint_velocity, (RobotJointIndex)i), vel_min, vel_max)
-        );
-    }
-
-    return limited_velocity;
-}
-
-
 Vector3 ROBOT_ApplyJointPositionLimits(Robot* self)
 {
     if (!self) {
@@ -307,78 +235,6 @@ Vector3 ROBOT_ApplyJointPositionLimits(Robot* self)
     }
 
     return limited_position;
-}
-
-RobotState ROBOT_ApplyJointLimits(Robot* self){
-
-    if (!self) {
-        RAISE(NullptrError);
-        return (RobotState){0};
-    }
-
-    RobotState limited_state = self->current;
-
-    for (int i = 0; i < ROBOT_NUM_JOINTS; i++) {
-        float pos_min = self->joint_position_limits[i][ROBOT_LIMIT_MIN];
-        float pos_max = self->joint_position_limits[i][ROBOT_LIMIT_MAX];
-
-        float vel_min = self->joint_velocity_limits[i][ROBOT_LIMIT_MIN];
-        float vel_max = self->joint_velocity_limits[i][ROBOT_LIMIT_MAX];
-
-        Vector3SetByJoint(&limited_state.joint_position, (RobotJointIndex)i,
-            Clamp(Vector3GetByJoint(self->current.joint_position, (RobotJointIndex)i), pos_min, pos_max)
-        );
-
-        Vector3SetByJoint(&limited_state.joint_velocity, (RobotJointIndex)i,
-            Clamp(Vector3GetByJoint(self->current.joint_velocity, (RobotJointIndex)i), vel_min, vel_max)
-        );
-    }
-
-    return limited_state;
-}
-
-void ROBOT_SetJointPositionTarget(Robot* self, Vector3 joint_position_target)
-{
-    if (!self) {
-        RAISE(NullptrError);
-        return;
-    }
-
-    self->target.joint_position = joint_position_target;
-    self->mode = ROBOT_MODE_JOINT_POSITION;
-}
-
-void ROBOT_SetJointVelocityTarget(Robot* self, Vector3 joint_velocity_target)
-{
-    if (!self) {
-        RAISE(NullptrError);
-        return;
-    }
-
-    self->target.joint_velocity = joint_velocity_target;
-    self->mode = ROBOT_MODE_JOINT_VELOCITY;
-}
-
-void ROBOT_SetTCPPositionTarget(Robot* self, Vector3 tcp_position_target)
-{
-    if (!self) {
-        RAISE(NullptrError);
-        return;
-    }
-
-    self->target.tcp_position = tcp_position_target;
-    self->mode = ROBOT_MODE_TCP_POSITION;
-}
-
-void ROBOT_SetTCPVelocityTarget(Robot* self, Vector3 tcp_velocity_target)
-{
-    if (!self) {
-        RAISE(NullptrError);
-        return;
-    }
-
-    self->target.tcp_velocity = tcp_velocity_target;
-    self->mode = ROBOT_MODE_TCP_VELOCITY;
 }
 
 float ROBOT_GetJointPositionAt(const Robot* self, RobotJointIndex joint)
@@ -498,32 +354,6 @@ void ROBOT_HandleModeChange(Robot* self)
             self->position_loop_counter = 0u;
             break;
 
-        case ROBOT_MODE_TCP_POSITION:
-            /*
-                Future behavior:
-                    TCP position target -> IK / resolved-rate control
-                    -> joint velocity targets -> velocity loop
-            */
-            ROBOT_ResetPositionControllers(self);
-            ROBOT_ResetVelocityControllers(self);
-
-            self->target.joint_velocity = Vector3Zero();
-            self->position_loop_counter = 0u;
-            break;
-
-        case ROBOT_MODE_TCP_VELOCITY:
-            /*
-                Future behavior:
-                    TCP velocity target -> Jacobian inverse
-                    -> joint velocity targets -> velocity loop
-            */
-            ROBOT_ResetPositionControllers(self);
-            ROBOT_ResetVelocityControllers(self);
-
-            self->target.joint_velocity = Vector3Zero();
-            self->position_loop_counter = 0u;
-            break;
-
         default:
             RAISE(ValueError);
             break;
@@ -568,7 +398,7 @@ void ROBOT_Update(Robot* self, float dt)
             if (self->position_loop_counter >= ROBOT_POSITION_LOOP_DIVIDER) {
                 self->position_loop_counter = 0u;
             }
-
+            
             return;
 
         case ROBOT_MODE_JOINT_VELOCITY:
@@ -577,30 +407,6 @@ void ROBOT_Update(Robot* self, float dt)
                 User/code is responsible for setting target.joint_velocity.
             */
             ROBOT_VelocityLoop(self, dt);
-            return;
-
-        case ROBOT_MODE_TCP_POSITION:
-            /*
-                Future implementation:
-                    ROBOT_TCPPositionLoop(self);
-                    ROBOT_VelocityLoop(self, dt);
-
-                For now, do not run velocity loop because stale joint velocity
-                targets could move the robot unintentionally.
-            */
-            ROBOT_ReadJointState(self);
-            return;
-
-        case ROBOT_MODE_TCP_VELOCITY:
-            /*
-                Future implementation:
-                    ROBOT_TCPVelocityLoop(self);
-                    ROBOT_VelocityLoop(self, dt);
-
-                For now, do not run velocity loop because TCP velocity mapping
-                is not implemented yet.
-            */
-            ROBOT_ReadJointState(self);
             return;
 
         default:
@@ -750,6 +556,45 @@ void ROBOT_PositionLoop(Robot* self)
         );
 
         Vector3SetByJoint(&self->target.joint_velocity, joint, velocity_command);
+    }
+}
+
+float Vector3GetByJoint(Vector3 v, RobotJointIndex joint)
+{
+    switch (joint) {
+        case ROBOT_JOINT_1: return v.x;
+        case ROBOT_JOINT_2: return v.y;
+        case ROBOT_JOINT_3: return v.z;
+
+        default:
+            RAISE(ValueError);
+            return 0.0f;
+    }
+}
+
+
+void Vector3SetByJoint(Vector3* v, RobotJointIndex joint, float value){
+    if (!v) {
+        RAISE(NullptrError);
+        return;
+    }
+
+    switch (joint) {
+        case ROBOT_JOINT_1:
+            v->x = value;
+            break;
+
+        case ROBOT_JOINT_2:
+            v->y = value;
+            break;
+
+        case ROBOT_JOINT_3:
+            v->z = value;
+            break;
+
+        default:
+            RAISE(ValueError);
+            break;
     }
 }
 

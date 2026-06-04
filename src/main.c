@@ -199,7 +199,7 @@ int main(void)
     {
         now = GetTime();
 
-        UpdateTestPoseCycle(SCARA, now);
+        //UpdateTestPoseCycle(SCARA, now);
 
         bool did_work = false;
 
@@ -514,7 +514,7 @@ void UpdateDrawFrame(void)
 
         BeginMode3D(camera);
 
-            DrawGrid(30, 5.0f);
+            DrawGrid(30, 2.5f);
             DrawWorldAxes3D(50.0f);
             ROBOT_Draw(SCARA);
 

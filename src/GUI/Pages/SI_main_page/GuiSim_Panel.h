@@ -5,6 +5,7 @@
 #include "raylib.h"
 
 #include "Robot/Robot/robot.h"
+#include "Robot/Robot/robot_comand.h"
 
 #define GUI_SIM_FIELD_TEXT_SIZE 32
 
@@ -12,17 +13,15 @@ typedef struct GuiSimPanel {
     RobotState State;
     RobotState CommandedState;
 
-    char joint_target_x_text[GUI_SIM_FIELD_TEXT_SIZE];
-    char joint_target_y_text[GUI_SIM_FIELD_TEXT_SIZE];
-    char joint_target_z_text[GUI_SIM_FIELD_TEXT_SIZE];
-
-    bool joint_target_x_edit;
-    bool joint_target_y_edit;
-    bool joint_target_z_edit;
-
-    bool apply_joint_target_requested;
+    char joint_target_text[3][GUI_SIM_FIELD_TEXT_SIZE];
+    char TCP_target_text[3][GUI_SIM_FIELD_TEXT_SIZE];
+    bool joint_target_edit[3];
+    bool TCP_target_edit[3];
 
     bool use_degrees;
+    bool has_command_message;
+    bool apply_joint_target_requested;
+    bool TCP_joint_target_requested;
 } GuiSimPanel;
 
 /**

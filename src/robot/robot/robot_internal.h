@@ -7,8 +7,6 @@ typedef enum RobotMode {
     ROBOT_MODE_IDLE = 0,
     ROBOT_MODE_JOINT_POSITION,
     ROBOT_MODE_JOINT_VELOCITY,
-    ROBOT_MODE_TCP_POSITION,
-    ROBOT_MODE_TCP_VELOCITY
 } RobotMode;
 
 struct Robot {

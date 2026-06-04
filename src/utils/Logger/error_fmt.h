@@ -12,6 +12,11 @@ extern "C" {
 
 typedef uint8_t ErrorType; /**< Type definition for error codes. */
 extern ErrorType NO_ERROR; /**< Represents no error condition. */
+extern ErrorType JP_RANGE; /**< Represents joint position out of range. */
+extern ErrorType JP_CMD_CLAMPED; /**< Represents clamped joint position command. */
+extern ErrorType JP_CMD_REJECTED; /**< Represents rejected joint position command. */
+extern ErrorType TCP_CMD_CLAMPED; /**< Represents clamped TCP command. */
+extern ErrorType TCP_CMD_REJECTED; /**< Represents rejected TCP command. */
 
 
 /**

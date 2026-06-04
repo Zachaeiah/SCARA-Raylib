@@ -9,6 +9,7 @@ extern "C" {
 #include "Robot/link/link.h"
 #include "raylib.h"
 
+// Forward declarations
 typedef struct Robot Robot;
 
 typedef enum RobotControllerIndex {
@@ -20,7 +21,7 @@ typedef enum RobotControllerIndex {
     ROBOT_CTRL_J2_VEL,
     ROBOT_CTRL_J3_VEL,
 
-    ROBOT_NUM_CTRLS
+    ROBOT_NUM_CTRLS // this should always be equal to the number of controllers in the robot, and should be updated if the robot's design changes
 } RobotControllerIndex;
 
 typedef enum RobotLinkIndex {
@@ -29,7 +30,7 @@ typedef enum RobotLinkIndex {
     ROBOT_LINK_3,
     ROBOT_LINK_4,
 
-    ROBOT_NUM_LINKS
+    ROBOT_NUM_LINKS // this should always be equal to the number of links in the robot, and should be updated if the robot's design changes
 } RobotLinkIndex;
 
 typedef enum RobotJointIndex {
@@ -37,14 +38,14 @@ typedef enum RobotJointIndex {
     ROBOT_JOINT_2,
     ROBOT_JOINT_3,
 
-    ROBOT_NUM_JOINTS
+    ROBOT_NUM_JOINTS // this should always be equal to the number of joints in the robot, and should be updated if the robot's design changes
 } RobotJointIndex;
 
 typedef enum RobotLimitIndex {
     ROBOT_LIMIT_MIN = 0,
     ROBOT_LIMIT_MAX,
 
-    ROBOT_NUM_LIMITS
+    ROBOT_NUM_LIMITS // this should always be equal to 2, representing the minimum and maximum limits for joint positions and velocities
 } RobotLimitIndex;
 
 /**
@@ -77,73 +78,12 @@ extern Robot* ROBOT_Create(Controller* controllers[ROBOT_NUM_CTRLS],
 extern void ROBOT_Destroy(Robot* self);
 
 /**
- * @brief Sets the position and velocity limits for each robot joint.
- * 
- * @param self A pointer to the Robot instance.
- * @param joint_position_limits An array of position limits for each robot joint.
- * @param joint_velocity_limits An array of velocity limits for each robot joint.
- */
-extern void ROBOT_SetJointLimits(
-    Robot* self,
-    const float joint_position_limits[ROBOT_NUM_JOINTS][ROBOT_NUM_LIMITS],
-    const float joint_velocity_limits[ROBOT_NUM_JOINTS][ROBOT_NUM_LIMITS]
-);
-
-/**
  * @brief Applies velocity limits to the robot's joint velocities and returns the resulting state.
  * 
  * @param self A pointer to the Robot instance.
  * @return Vector3 A Vector3 struct containing the joint velocities after applying velocity limits.
  */
 extern Vector3 ROBOT_ApplyJointVelocityLimits(Robot* self);
-
-/**
- * @brief Applies position limits to the robot's joint positions and returns the resulting state.
- * 
- * @param self A pointer to the Robot instance.
- * @return Vector3 A Vector3 struct containing the joint positions after applying position limits.
- */
-extern Vector3 ROBOT_ApplyJointPositionLimits(Robot* self);
-
-/**
- * @brief Applies joint position and velocity limits to the robot's current state and returns the resulting state.
- * 
- * @param self A pointer to the Robot instance.
- * @return RobotState A RobotState struct containing the joint positions and velocities after applying limits.
- */
-extern RobotState ROBOT_ApplyJointLimits(Robot* self);
-
-/**
- * @brief Sets the target position for a specific joint.
- * 
- * @param self A pointer to the Robot instance.
- * @param joint_position_target The target position for the joint.
- */
-extern void ROBOT_SetJointPositionTarget(Robot* self, Vector3 joint_position_target);
-
-/**
- * @brief Sets the target velocity for a specific joint.
- * 
- * @param self A pointer to the Robot instance.
- * @param joint_velocity_target The target velocity for the joint.
- */
-extern void ROBOT_SetJointVelocityTarget(Robot* self, Vector3 joint_velocity_target);
-
-/**
- * @brief Sets the target position for the robot's TCP.
- * 
- * @param self A pointer to the Robot instance.
- * @param tcp_position_target The target position for the TCP.
- */
-extern void ROBOT_SetTCPPositionTarget(Robot* self, Vector3 tcp_position_target);
-
-/**
- * @brief Sets the target velocity for the robot's TCP.
- * 
- * @param self A pointer to the Robot instance.
- * @param tcp_velocity_target The target velocity for the TCP.
- */
-extern void ROBOT_SetTCPVelocityTarget(Robot* self, Vector3 tcp_velocity_target);
 
 /**
  * @brief Gets the current position of the robot's joints.
@@ -224,6 +164,23 @@ extern void ROBOT_Draw(Robot* self);
  * @param self A pointer to the Robot instance.
  */
 extern void ROBOT_HandleModeChange(Robot* self);
+
+
+/** 
+ * @brief Gets the value of a Vector3 component based on the joint index.
+ * @param v The Vector3 struct.
+ * @param joint The joint index.
+ * @return The value of the specified component.
+ */
+extern float Vector3GetByJoint(Vector3 v, RobotJointIndex joint);
+
+/** 
+ * @brief Sets the value of a Vector3 component based on the joint index.
+ * @param v A pointer to the Vector3 struct to modify.
+ * @param joint The joint index.
+ * @param value The value to set for the specified component.
+ */
+extern void Vector3SetByJoint(Vector3* v, RobotJointIndex joint, float value);
 
 #ifdef __cplusplus
 }
