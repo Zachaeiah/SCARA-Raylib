@@ -20,6 +20,12 @@
 void ROBOT_VelocityLoop(Robot* self, float dt);
 void ROBOT_PositionLoop(Robot* self);
 
+/** 
+ * @brief Gets the value of a Vector3 component based on the joint index.
+ * @param v The Vector3 struct.
+ * @param joint The joint index.
+ * @return The value of the specified component.
+ */
 static float Vector3GetByJoint(Vector3 v, RobotJointIndex joint)
 {
     switch (joint) {
@@ -33,6 +39,11 @@ static float Vector3GetByJoint(Vector3 v, RobotJointIndex joint)
     }
 }
 
+/** 
+ * @brief Converts a joint index to a link index.
+ * @param joint The joint index.
+ * @return The corresponding link index.
+ */
 static RobotLinkIndex LinkIndexFromJoint(RobotJointIndex joint)
 {
     switch (joint) {
@@ -51,6 +62,12 @@ static RobotLinkIndex LinkIndexFromJoint(RobotJointIndex joint)
     }
 }
 
+/** 
+ * @brief Sets the value of a Vector3 component based on the joint index.
+ * @param v A pointer to the Vector3 struct.
+ * @param joint The joint index.
+ * @param value The value to set.
+ */
 static void Vector3SetByJoint(Vector3* v, RobotJointIndex joint, float value)
 {
     if (!v) {
@@ -77,6 +94,12 @@ static void Vector3SetByJoint(Vector3* v, RobotJointIndex joint, float value)
     }
 }
 
+
+/** 
+ * @brief Converts a joint index to a position controller index.
+ * @param joint The joint index.
+ * @return The corresponding position controller index.
+ */
 static RobotControllerIndex PositionControllerFromJoint(RobotJointIndex joint)
 {
     switch (joint) {
@@ -90,6 +113,11 @@ static RobotControllerIndex PositionControllerFromJoint(RobotJointIndex joint)
     }
 }
 
+/** 
+ * @brief Converts a joint index to a velocity controller index.
+ * @param joint The joint index.
+ * @return The corresponding velocity controller index.
+ */
 static RobotControllerIndex VelocityControllerFromJoint(RobotJointIndex joint)
 {
     switch (joint) {
@@ -103,6 +131,10 @@ static RobotControllerIndex VelocityControllerFromJoint(RobotJointIndex joint)
     }
 }
 
+/** 
+ * @brief Reads the current state of each joint and updates the robot's internal state.
+ * @param self A pointer to the Robot instance.
+ */
 static void ROBOT_ReadJointState(Robot* self)
 {
     if (!self) {
@@ -119,6 +151,10 @@ static void ROBOT_ReadJointState(Robot* self)
     }
 }
 
+/** 
+ * @brief Resets the position controllers for all joints.
+ * @param self A pointer to the Robot instance.
+ */
 static void ROBOT_ResetPositionControllers(Robot* self)
 {
     for (int i = 0; i < ROBOT_NUM_JOINTS; i++) {
@@ -129,6 +165,10 @@ static void ROBOT_ResetPositionControllers(Robot* self)
     }
 }
 
+/** 
+ * @brief Resets the velocity controllers for all joints.
+ * @param self A pointer to the Robot instance.
+ */
 static void ROBOT_ResetVelocityControllers(Robot* self)
 {
     for (int i = 0; i < ROBOT_NUM_JOINTS; i++) {
@@ -224,6 +264,77 @@ void ROBOT_SetJointLimits(
         self->joint_velocity_limits[i][ROBOT_LIMIT_MIN] = vel_min;
         self->joint_velocity_limits[i][ROBOT_LIMIT_MAX] = vel_max;
     }
+}
+
+
+Vector3 ROBOT_ApplyJointVelocityLimits(Robot* self){
+    if (!self) {
+        RAISE(NullptrError);
+        return Vector3Zero();
+    }
+
+    Vector3 limited_velocity = self->current.joint_velocity;
+
+    for (int i = 0; i < ROBOT_NUM_JOINTS; i++) {
+        float vel_min = self->joint_velocity_limits[i][ROBOT_LIMIT_MIN];
+        float vel_max = self->joint_velocity_limits[i][ROBOT_LIMIT_MAX];
+
+        Vector3SetByJoint(&limited_velocity, (RobotJointIndex)i,
+            Clamp(Vector3GetByJoint(self->current.joint_velocity, (RobotJointIndex)i), vel_min, vel_max)
+        );
+    }
+
+    return limited_velocity;
+}
+
+
+Vector3 ROBOT_ApplyJointPositionLimits(Robot* self)
+{
+    if (!self) {
+        RAISE(NullptrError);
+        return Vector3Zero();
+    }
+
+    Vector3 limited_position = self->current.joint_position;
+
+    for (int i = 0; i < ROBOT_NUM_JOINTS; i++) {
+        float pos_min = self->joint_position_limits[i][ROBOT_LIMIT_MIN];
+        float pos_max = self->joint_position_limits[i][ROBOT_LIMIT_MAX];
+
+        Vector3SetByJoint(&limited_position, (RobotJointIndex)i,
+            Clamp(Vector3GetByJoint(self->current.joint_position, (RobotJointIndex)i), pos_min, pos_max)
+        );
+    }
+
+    return limited_position;
+}
+
+RobotState ROBOT_ApplyJointLimits(Robot* self){
+
+    if (!self) {
+        RAISE(NullptrError);
+        return (RobotState){0};
+    }
+
+    RobotState limited_state = self->current;
+
+    for (int i = 0; i < ROBOT_NUM_JOINTS; i++) {
+        float pos_min = self->joint_position_limits[i][ROBOT_LIMIT_MIN];
+        float pos_max = self->joint_position_limits[i][ROBOT_LIMIT_MAX];
+
+        float vel_min = self->joint_velocity_limits[i][ROBOT_LIMIT_MIN];
+        float vel_max = self->joint_velocity_limits[i][ROBOT_LIMIT_MAX];
+
+        Vector3SetByJoint(&limited_state.joint_position, (RobotJointIndex)i,
+            Clamp(Vector3GetByJoint(self->current.joint_position, (RobotJointIndex)i), pos_min, pos_max)
+        );
+
+        Vector3SetByJoint(&limited_state.joint_velocity, (RobotJointIndex)i,
+            Clamp(Vector3GetByJoint(self->current.joint_velocity, (RobotJointIndex)i), vel_min, vel_max)
+        );
+    }
+
+    return limited_state;
 }
 
 void ROBOT_SetJointPositionTarget(Robot* self, Vector3 joint_position_target)
@@ -329,6 +440,16 @@ Vector3 ROBOT_GetTCPVelocity(const Robot* self)
     }
 
     return self->current.tcp_velocity;
+}
+
+void ROBOT_GetState(const Robot* self, RobotState* out_state)
+{
+    if (!self || !out_state) {
+        RAISE(NullptrError);
+        return;
+    }
+
+    *out_state = self->current;
 }
 
 void ROBOT_HandleModeChange(Robot* self)

@@ -1,3 +1,8 @@
+// src/main.c
+
+#define RAYGUI_IMPLEMENTATION
+#include "raygui.h"
+
 #include "raylib.h"
 #include "raymath.h"
 #include "rlgl.h"
@@ -5,6 +10,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "utils/Profiler/profiler.h"
+#include "GUI/Pages/SI_main_page/GuiSim_Panel.h"
 #include "Robot/Robot/robot.h"
 #include "Control/Controller/Controller.h"
 #include "Robot/link/link.h"
@@ -13,6 +19,11 @@
 #include "Control/Actuator/Actuator.h"
 #include "utils/Logger/logger.h"
 #include "utils/Exceptions_Assertions/except.h"
+#include "GUI/Pages/SI_main_page/GuiSim_Panel.h"
+
+
+
+
 
 // ---------------------------------------------------------
 // Timing
@@ -29,10 +40,6 @@
 #define MAX_PID_STEPS_PER_LOOP 5
 
 #define TEST_POSE_PERIOD_SEC 5.0
-
-static ProfilerTimer prof_robot  = { "Robot Draw" };
-static ProfilerTimer prof_frame  = { "Frame" };
-static ProfilerTimer prof_control = { "Control Update" };
 
 // ---------------------------------------------------------
 // Globals
@@ -83,6 +90,8 @@ Link* link1 = NULL;
 Link* link2 = NULL;
 Link* link3 = NULL;
 Link* link4 = NULL;
+
+static GuiSimPanel gui_sim_panel;
 
 // ---------------------------------------------------------
 // Functions
@@ -164,6 +173,9 @@ int main(void)
     
     // setup scara robot with simple setup for testing
     SCARA = ROBOT_Create(controllers, links);
+
+    // setup GUI panel with initial robot state
+    GUI_SIM_PANEL_Init(&gui_sim_panel, SCARA);
 
     // set joint limits
     ROBOT_SetJointLimits(SCARA, jp_limits, jp_velocity_limits);
@@ -282,7 +294,7 @@ void Pos_Ctrl_Update(void){
 // ---------------------------------------------------------
 void Control_Update(void)
 {
-    PROFILER_Begin(&prof_control);
+    
 
     float t = (float)GetTime();
 
@@ -309,7 +321,6 @@ void Control_Update(void)
     LINK_SetHeadingWorld(link4, link4Heading);
     LINK_SetJointPosition(link4, 0.0f);
 
-    PROFILER_End(&prof_control);
 }
 
 void UpdateTestPoseCycle(Robot* robot, double now)
@@ -491,16 +502,11 @@ void DrawWorldAxes3D(float length)
 // ---------------------------------------------------------
 void UpdateDrawFrame(void)
 {
-    PROFILER_Begin(&prof_frame);
-
+    // Update camera (simple orbital rotation around target)
     UpdateCamera(&camera, CAMERA_ORBITAL);
 
-    Vector3 jp = ROBOT_GetJointPosition(SCARA);
-
-    float J1_rad = jp.x;
-    float J2_rad = jp.y;
-    float J3_pos = jp.z;
-
+    // Update GUI state with latest robot state
+    GUI_SIM_PANEL_Update(&gui_sim_panel, SCARA);
 
     BeginDrawing();
 
@@ -509,25 +515,13 @@ void UpdateDrawFrame(void)
         BeginMode3D(camera);
 
             DrawGrid(30, 5.0f);
-
             DrawWorldAxes3D(50.0f);
-
-            PROFILER_Begin(&prof_robot);
             ROBOT_Draw(SCARA);
-            PROFILER_End(&prof_robot);
 
         EndMode3D();
 
-        PROFILER_End(&prof_frame);
-        
-        DrawText(TextFormat("FPS: %d", GetFPS()), 10, 10, 20, DARKGRAY);
-        DrawText(TextFormat("Frame: %.3f ms", prof_frame.elapsed_ms), 10, 40, 20, DARKGRAY);
-        DrawText(TextFormat("Robot Draw: %.3f ms", prof_robot.elapsed_ms), 10, 60, 20, DARKGRAY);
-        DrawText(TextFormat("Control: %.6f ms", prof_control.elapsed_ms), 10, 80, 20, DARKGRAY);
-
-        DrawText(TextFormat("J1: %.2f deg", J1_rad * RAD2DEG), 10, 110, 20, DARKGRAY);
-        DrawText(TextFormat("J2: %.2f deg", J2_rad * RAD2DEG), 10, 130, 20, DARKGRAY);
-        DrawText(TextFormat("J3: %.3f m", J3_pos),             10, 150, 20, DARKGRAY);
+        // Draw GUI on top of 3D view
+        GUI_SIM_PANEL_Draw(&gui_sim_panel);
 
     EndDrawing();
 }

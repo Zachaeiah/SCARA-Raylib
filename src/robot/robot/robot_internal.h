@@ -11,14 +11,6 @@ typedef enum RobotMode {
     ROBOT_MODE_TCP_VELOCITY
 } RobotMode;
 
-typedef struct RobotState {
-    Vector3 tcp_position;
-    Vector3 tcp_velocity;
-
-    Vector3 joint_position;
-    Vector3 joint_velocity;
-} RobotState;
-
 struct Robot {
     Link* links[ROBOT_NUM_LINKS];
     Controller* controllers[ROBOT_NUM_CTRLS];
