@@ -21,6 +21,12 @@
 #include "utils/Exceptions_Assertions/except.h"
 #include "GUI/Pages/SI_main_page/GuiSim_Panel.h"
 
+ErrorType JP_CMD_CLAMPED = 1; /**< Represents clamped joint position command. */
+ErrorType TCP_CMD_CLAMPED = 2; /**< Represents clamped TCP command. */
+ErrorType JP_CMD_REJECTED = 3; /**< Represents rejected joint position command. */
+ErrorType TCP_CMD_REJECTED = 4; /**< Represents rejected TCP command. */
+ErrorType LOGIC_ERROR = 5; /**< contradictory resullts */
+
 
 
 

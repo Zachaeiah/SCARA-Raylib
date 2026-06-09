@@ -48,6 +48,7 @@ typedef enum RobotLimitIndex {
     ROBOT_NUM_LIMITS // this should always be equal to 2, representing the minimum and maximum limits for joint positions and velocities
 } RobotLimitIndex;
 
+
 /**
  * @brief Represents the state of the robot.
  */

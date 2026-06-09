@@ -1,7 +1,8 @@
 
 #include "robot_internal.h"
 
-#include "utils/Exceptions_Assertions/except.h"
+
+#include "utils/Logger/logger.h"
 #include "utils/MemAllocator/mem.h"
 
 #include "raymath.h"
@@ -128,6 +129,13 @@ static void ROBOT_ResetVelocityControllers(Robot* self)
     }
 }
 
+static bool ROBOT_IsValidLimitPair(float min_limit, float max_limit)
+{
+    return isfinite(min_limit) &&
+           isfinite(max_limit) &&
+           min_limit <= max_limit;
+}
+
 /**
  * @brief Constructs a new Robot instance with the given controllers and links.
  * 
@@ -202,8 +210,21 @@ void ROBOT_SetJointLimits(
         float vel_min = joint_velocity_limits[i][ROBOT_LIMIT_MIN];
         float vel_max = joint_velocity_limits[i][ROBOT_LIMIT_MAX];
 
-        if (jp_min >= jp_max || vel_min >= vel_max) {
-            RAISE(ValueError);
+        if (!ROBOT_IsValidLimitPair(jp_min, jp_max)){
+            LOG_ERROR_MSG(JP_RANGE, "Joint position limit command was rejected. Target may be out of bounds. Joint %d, limits: [%f, %f]\n",
+                i + 1,
+                jp_min,
+                jp_max
+            );
+            return;
+        }
+
+        if (!ROBOT_IsValidLimitPair(vel_min, vel_max)){
+            LOG_ERROR_MSG(JP_RANGE, "Joint velocity limit command was rejected. Target may be out of bounds. Joint %d limits: [%f, %f]\n",
+                i + 1,
+                vel_min,
+                vel_max
+            );
             return;
         }
 

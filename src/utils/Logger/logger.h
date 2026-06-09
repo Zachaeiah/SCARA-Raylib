@@ -13,6 +13,14 @@ extern "C" {
 
 extern FILE* flog; /**< File pointer for logging output. */
 
+extern ErrorType NO_ERROR; /**< Represents no error condition. */
+extern ErrorType JP_RANGE; /**< Represents joint position out of range. */
+extern ErrorType LOGIC_ERROR; /**< contradictory resullts */
+extern ErrorType JP_CMD_CLAMPED; /**< Represents clamped joint position command. */
+extern ErrorType JP_CMD_REJECTED; /**< Represents rejected joint position command. */
+extern ErrorType TCP_CMD_CLAMPED; /**< Represents clamped TCP command. */
+extern ErrorType TCP_CMD_REJECTED; /**< Represents rejected TCP command. */
+
 /**
  * @brief Initialize the logger file.
  *
@@ -85,7 +93,7 @@ extern void Logger_log(int severity, const char* file, const char* func, const u
  * @param errType The error code associated with the log message. Use NO_ERROR if there is no specific error code.
  * @param msg The format string (printf-style) for the message to be logged.
  */
-#define LOG_CRITICAL_MSG(errType, msg, ...) Logger_log(LOG_CRITICAL, __FILE__, __FUNCTION__, __LINE__, errType, msg, ##__VA_ARGS__)
+#define LOG_FATAL_MSG(errType, msg, ...) Logger_log(LOG_FATAL, __FILE__, __FUNCTION__, __LINE__, errType, msg, ##__VA_ARGS__)
 
 #ifdef __cplusplus
 }

@@ -2,6 +2,7 @@
 #define ROBOT_ROBOT_KINEMATICS_H_
 
 #include "raylib.h"
+#include "stdbool.h"
 #include "robot.h"
 
 
@@ -11,13 +12,20 @@
 
 typedef struct FK_result{
     Vector3 TCP; // position of the end effector
-    char reachable; // flag indicating if the target position is reachable
+    bool reachable; // flag indicating if the target position is reachable
 } FK_result;
 
 typedef struct IK_result{
     Vector3 JP[MAX_SOLUTIONS]; // joint angles to reach the target position (in radians)
-    char reachable[MAX_SOLUTIONS]; // flag indicating if the target position is reachable
+    bool reachable[MAX_SOLUTIONS]; // flag indicating if the target position is reachable
 } IK_result;
+
+typedef struct JB_result{
+    Vector3 tcp_velocity; // curent tcp velcity
+    Vector3 joint_velocity; // tartget joint velcity
+    bool reachable;
+    bool singularity;
+}JB_result;
 
 /**
  * @brief Computes the forward kinematics for the robot given the joint angles.
@@ -35,6 +43,15 @@ extern FK_result ROBOT_forward_kinematics(Robot* robot, Vector3 target_JP);
  * @param target_TCP the target position as a Vector3
  */
 extern IK_result ROBOT_inverse_kinematics(Robot* robot, Vector3 target_TCP);
+
+/**
+ * @brief 
+ * 
+ * @param robot 
+ * @return JB_result 
+ */
+extern JB_result ROBOT_jacobian_velcitys(Robot* robot, Vector3 target_TCP_vel);
+
 
 
 #endif // ROBOT_ROBOT_KINEMATICS_H_

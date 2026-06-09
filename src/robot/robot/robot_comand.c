@@ -8,82 +8,138 @@
 #include "raylib.h"
 #include "raymath.h"
 
-ErrorType JP_CMD_CLAMPED = 1; /**< Represents clamped joint position command. */
-ErrorType TCP_CMD_CLAMPED = 2; /**< Represents clamped TCP command. */
-ErrorType JP_CMD_REJECTED = 3; /**< Represents rejected joint position command. */
-ErrorType TCP_CMD_REJECTED = 4; /**< Represents rejected TCP command. */
+#include <math.h>
+#include <stdbool.h>
 
+#define CLAMP_TOLERANCE 0.000005f
 
-#define CLAMP_TOLERANCE 0.001f
+typedef struct JointCommandCheck {
+    RobotCommandStatus status;
+    Vector3 joint_position;
+    char clamped_joint;
+} JointCommandCheck;
 
-static bool is_within_limits(float value, float min_limit, float max_limit)
+static bool IsFiniteVector3(Vector3 v)
 {
-    return value >= min_limit - CLAMP_TOLERANCE && value <= max_limit + CLAMP_TOLERANCE;
+    return isfinite(v.x) && isfinite(v.y) && isfinite(v.z);
 }
 
-
-RobotCommandStatus ROBOT_SetJointPositionTarget(Robot* self, Vector3 joint_position_target)
+static bool IsWithinLimitsTol(float value, float min_limit, float max_limit)
 {
+    return value >= min_limit - CLAMP_TOLERANCE &&
+           value <= max_limit + CLAMP_TOLERANCE;
+}
+
+static JointCommandCheck CheckJointPositionTarget(Robot* self, Vector3 requested_jp)
+{
+    JointCommandCheck result = {
+        .status = ROBOT_COMMAND_OK,
+        .joint_position = requested_jp,
+        .clamped_joint = 0x00
+    };
+
     if (!self) {
-        RAISE(NullptrError);
-        return ROBOT_COMMAND_REJECTED;
+        result.status = ROBOT_COMMAND_REJECTED;
+        return result;
     }
 
-    bool command_clamped = false;
+    if (!IsFiniteVector3(requested_jp)) {
+        LOG_ERROR_MSG(
+            JP_CMD_REJECTED,
+            "Joint position target rejected. Non-finite target. JP: (%5.f, %.5f, %5.f)\n",
+            requested_jp.x,
+            requested_jp.y,
+            requested_jp.z
+        );
 
-    // Check if the target position is within limits
+        result.status = ROBOT_COMMAND_REJECTED;
+        return result;
+    }
+
     for (int i = 0; i < ROBOT_NUM_JOINTS; i++) {
+        RobotJointIndex joint = (RobotJointIndex)i;
 
         float pos_min = self->joint_position_limits[i][ROBOT_LIMIT_MIN];
         float pos_max = self->joint_position_limits[i][ROBOT_LIMIT_MAX];
+        float value = Vector3GetByJoint(result.joint_position, joint);
 
-        if (!is_within_limits(Vector3GetByJoint(joint_position_target, (RobotJointIndex)i), pos_min, pos_max)) {
-            LOG_ERROR_MSG(JP_CMD_REJECTED, "Joint position target command was rejected. Target may be out of bounds. Joint %d target: %f, limits: [%f, %f]\n",
+        if (!IsWithinLimitsTol(value, pos_min, pos_max)) {
+            LOG_ERROR_MSG(
+                JP_CMD_REJECTED,
+                "Joint position target rejected. Joint %d target: %.3f, limits: [%.3f, %.3f]\n",
                 i + 1,
-                Vector3GetByJoint(joint_position_target, (RobotJointIndex)i),
+                value,
                 pos_min,
                 pos_max
             );
-            return ROBOT_COMMAND_REJECTED;
-        }
-        else
-        {
-            // If the target is slightly outside the limits, clamp it and return CLAMPED status
-            if (Vector3GetByJoint(joint_position_target, (RobotJointIndex)i) < pos_min) {
-                Vector3SetByJoint(&joint_position_target, (RobotJointIndex)i, pos_min);
-                command_clamped = true;
-            }
-            else if (Vector3GetByJoint(joint_position_target, (RobotJointIndex)i) > pos_max) {
-                Vector3SetByJoint(&joint_position_target, (RobotJointIndex)i, pos_max);
-                command_clamped = true;
-            }
-            
+
+            result.status = ROBOT_COMMAND_REJECTED;
+            return result;
         }
 
-        if (command_clamped) {
-            LOG_WARN_MSG(JP_CMD_CLAMPED, "Joint position target command was clamped. Target is near bounds. Joint %d target: %f, limits: [%f, %f]\n",
-                i + 1,
-                Vector3GetByJoint(joint_position_target, (RobotJointIndex)i),
-                pos_min,
-                pos_max
-            );
+        if (value < pos_min) {
+            Vector3SetByJoint(&result.joint_position, joint, pos_min);
+            result.status = ROBOT_COMMAND_CLAMPED;
+            result.clamped_joint = (0x1) << i;
+        }
+        else if (value > pos_max) {
+            Vector3SetByJoint(&result.joint_position, joint, pos_max);
+            result.status = ROBOT_COMMAND_CLAMPED;
+            result.clamped_joint = (0x1) << i;
         }
     }
 
-    self->target.joint_position = joint_position_target;
-    self->mode = ROBOT_MODE_JOINT_POSITION;
-    return command_clamped ? ROBOT_COMMAND_CLAMPED : ROBOT_COMMAND_OK;
+    return result;
 }
 
-RobotCommandStatus ROBOT_SetJointVelocityTarget(Robot* self, Vector3 joint_velocity_target)
+static float JointDelta(Vector3 a, Vector3 b)
 {
+    return Vector3Distance(a, b);
+}
+
+RobotCommandStatus ROBOT_SetJointPositionTarget(Robot* self, Vector3 joint_position_target)
+{
+    FK_result fk_sol;
+
+
     if (!self) {
         RAISE(NullptrError);
         return ROBOT_COMMAND_REJECTED;
     }
 
-    RAISE(NotImplementedError);
-    return ROBOT_COMMAND_REJECTED;
+    JointCommandCheck check = CheckJointPositionTarget(self, joint_position_target);
+
+    if (check.status == ROBOT_COMMAND_REJECTED) {
+        return ROBOT_COMMAND_REJECTED;
+    }
+
+    fk_sol = ROBOT_forward_kinematics(self, check.joint_position);
+
+    if (!fk_sol.reachable){
+        LOG_FATAL_MSG(LOGIC_ERROR, "Joint position target passed check but bot reachable\n");
+        return ROBOT_COMMAND_REJECTED;
+    }
+
+    if (check.status == ROBOT_COMMAND_CLAMPED) {
+        LOG_WARN_MSG(
+            JP_CMD_CLAMPED,
+            "Joint position target clamped. Requested JP: (%.3f, %.3f, %.3f), clamped JP: (%.3f, %.3f, %.3f)\n",
+            joint_position_target.x,
+            joint_position_target.y,
+            joint_position_target.z,
+            check.joint_position.x,
+            check.joint_position.y,
+            check.joint_position.z
+        );
+    }
+
+    
+
+    self->target.joint_position = check.joint_position;
+    self->target.tcp_position = fk_sol.TCP;
+    self->mode = ROBOT_MODE_JOINT_POSITION;
+
+    return check.status;
 }
 
 RobotCommandStatus ROBOT_SetTCPPositionTarget(Robot* self, Vector3 tcp_position_target)
@@ -93,128 +149,97 @@ RobotCommandStatus ROBOT_SetTCPPositionTarget(Robot* self, Vector3 tcp_position_
         return ROBOT_COMMAND_REJECTED;
     }
 
-    RobotCommandStatus command_status[MAX_SOLUTIONS] = {ROBOT_COMMAND_OK, ROBOT_COMMAND_OK};
-    float joint_change_delta[MAX_SOLUTIONS] = {0.0f, 0.0f};
-    IK_result ik_result_CL;
-
-
-    IK_result ik_result = ROBOT_inverse_kinematics(self, tcp_position_target);
-    ik_result_CL = ik_result;
-    
-
-    // If both solutions are rejected, return REJECTED
-    if (command_status[LEFT_SOLUTION] == ROBOT_COMMAND_REJECTED && command_status[RIGHT_SOLUTION] == ROBOT_COMMAND_REJECTED) {
-        LOG_ERROR_MSG(TCP_CMD_REJECTED, "TCP position target command was rejected. Target is unreachable. Target: (%.3f, %.3f, %.3f) JP: (%.3f, %.3f, %.3f)\n",
+    if (!IsFiniteVector3(tcp_position_target)) {
+        LOG_ERROR_MSG(
+            TCP_CMD_REJECTED,
+            "TCP position target rejected. Non-finite target. TCP: (%.3f, %.3f, %.3f)\n",
             tcp_position_target.x,
             tcp_position_target.y,
-            tcp_position_target.z,
-            ik_result.JP[LEFT_SOLUTION].x,
-            ik_result.JP[LEFT_SOLUTION].y,
-            ik_result.JP[LEFT_SOLUTION].z
+            tcp_position_target.z
         );
+
         return ROBOT_COMMAND_REJECTED;
     }
-    else if (command_status[LEFT_SOLUTION] == ROBOT_COMMAND_REJECTED) {
-        LOG_WARN_MSG(TCP_CMD_REJECTED, "Left IK solution is rejected due to joint limits. Target TCP: (%.3f, %.3f, %.3f) JP: (%.3f, %.3f, %.3f)\n",
-            tcp_position_target.x,
-            tcp_position_target.y,
-            tcp_position_target.z,
-            ik_result.JP[LEFT_SOLUTION].x,
-            ik_result.JP[LEFT_SOLUTION].y,
-            ik_result.JP[LEFT_SOLUTION].z
-        );
-    }
-    else if (command_status[RIGHT_SOLUTION] == ROBOT_COMMAND_REJECTED) {
-        LOG_WARN_MSG(TCP_CMD_REJECTED, "Right IK solution is rejected due to joint limits. Target TCP: (%.3f, %.3f, %.3f) JP: (%.3f, %.3f, %.3f)\n",
-            tcp_position_target.x,
-            tcp_position_target.y,
-            tcp_position_target.z,
-            ik_result.JP[RIGHT_SOLUTION].x,
-            ik_result.JP[RIGHT_SOLUTION].y,
-            ik_result.JP[RIGHT_SOLUTION].z
-        );
-    }
 
-    // Check if the IK solutions are within joint limits
+    IK_result ik_result = ROBOT_inverse_kinematics(self, tcp_position_target);
+
+    JointCommandCheck checks[MAX_SOLUTIONS];
+    float joint_delta[MAX_SOLUTIONS];
+
     for (int i = 0; i < MAX_SOLUTIONS; i++) {
-        if (command_status[i] == ROBOT_COMMAND_REJECTED) {
-            // log that solution i is rejected due to joint limits
-            LOG_WARN_MSG(TCP_CMD_REJECTED, "IK solution %d is rejected due to joint limits. J1:%.3f, J2:%.3f, J3:%.3f\n",   
+        checks[i] = CheckJointPositionTarget(self, ik_result.JP[i]);
+
+        if (checks[i].status == ROBOT_COMMAND_REJECTED) {
+            joint_delta[i] = INFINITY;
+
+            LOG_WARN_MSG(
+                TCP_CMD_REJECTED,
+                "IK solution %d rejected due to joint limits or invalid value. JP: (%.3f, %.3f, %.3f)\n",
                 i,
                 ik_result.JP[i].x,
                 ik_result.JP[i].y,
                 ik_result.JP[i].z
             );
 
-            continue; // Skip rejected solutions
+            continue;
         }
 
-        Vector3 jp_solution = ik_result.JP[i];
-
-        command_status[i] = ROBOT_SetJointPositionTarget(self, jp_solution);
-
-        if (command_status[i] == ROBOT_COMMAND_REJECTED) {
-            continue; // Skip solutions that are rejected due to joint limits
-        }
-
+        joint_delta[i] = JointDelta(checks[i].joint_position, self->current.joint_position);
     }
+
+    int selected_solution = -1;
+    float best_delta = INFINITY;
 
     for (int i = 0; i < MAX_SOLUTIONS; i++) {
-        if (command_status[i] == ROBOT_COMMAND_REJECTED) {
-            joint_change_delta[i] = INFINITY; // Assign a large value to rejected solutions for comparison
-            continue; // Skip rejected solutions
+        if (checks[i].status == ROBOT_COMMAND_REJECTED) {
+            continue;
         }
 
-        Vector3 jp_solution = ik_result.JP[i];
-        Vector3 current_jp = self->current.joint_position;
-
-        // Calculate the total joint change for this solution
-        joint_change_delta[i] = Vector3Distance(jp_solution, current_jp);
-
-    }
-
-    // Select the solution with the smallest joint change
-    int selected_solution = LEFT_SOLUTION;
-
-
-    if (command_status[RIGHT_SOLUTION] != ROBOT_COMMAND_REJECTED) {
-        if (joint_change_delta[RIGHT_SOLUTION] < joint_change_delta[LEFT_SOLUTION]) {
-            selected_solution = RIGHT_SOLUTION;
+        if (joint_delta[i] < best_delta) {
+            best_delta = joint_delta[i];
+            selected_solution = i;
         }
     }
 
-    if (command_status[LEFT_SOLUTION] != ROBOT_COMMAND_REJECTED) {
-        if (joint_change_delta[LEFT_SOLUTION] < joint_change_delta[RIGHT_SOLUTION]) {
-            selected_solution = LEFT_SOLUTION;
-        }
-    }
-
-    if (command_status[selected_solution] == ROBOT_COMMAND_REJECTED) {
-        LOG_ERROR_MSG(TCP_CMD_REJECTED, "TCP position target command was rejected. Target is unreachable due to joint limits. Target: (%f, %f, %f)\n",
+    if (selected_solution < 0) {
+        LOG_ERROR_MSG(
+            TCP_CMD_REJECTED,
+            "TCP position target rejected. No valid IK solution. Requested TCP: (%.3f, %.3f, %.3f)\n",
             tcp_position_target.x,
             tcp_position_target.y,
             tcp_position_target.z
         );
-        return ROBOT_COMMAND_REJECTED; // This should not happen, but just in case
+
+        return ROBOT_COMMAND_REJECTED;
     }
 
-    if (command_status[selected_solution] == ROBOT_COMMAND_CLAMPED) {
-        ik_result_CL.JP[selected_solution] = ROBOT_forward_kinematics(self, ik_result.JP[selected_solution]).TCP;
-        LOG_WARN_MSG(TCP_CMD_CLAMPED, "TCP position target command was clamped. Target is near bounds. Target: (%f, %f, %f), Clamped TCP: (%f, %f, %f)\n",
+    Vector3 selected_jp = checks[selected_solution].joint_position;
+    FK_result selected_tcp = ROBOT_forward_kinematics(self, selected_jp);
+
+    if (!selected_tcp.reachable){
+        LOG_FATAL_MSG(LOGIC_ERROR, "Joint position target passed check but bot reachable\n");
+        return ROBOT_COMMAND_REJECTED;
+    }
+
+    if (checks[selected_solution].status == ROBOT_COMMAND_CLAMPED) {
+        LOG_WARN_MSG(
+            TCP_CMD_CLAMPED,
+            "TCP position target clamped. Requested TCP: (%.3f, %.3f, %.3f), achievable TCP: (%.3f, %.3f, %.3f), selected IK solution: %d\n",
             tcp_position_target.x,
             tcp_position_target.y,
             tcp_position_target.z,
-            ik_result_CL.JP[selected_solution].x,
-            ik_result_CL.JP[selected_solution].y,
-            ik_result_CL.JP[selected_solution].z
+            selected_tcp.TCP.x,
+            selected_tcp.TCP.y,
+            selected_tcp.TCP.z,
+            selected_solution
         );
     }
 
-    // Set the target joint position to the selected IK solution
-    self->target.tcp_position = ik_result_CL.JP[selected_solution];
-    self->target.joint_position = ik_result.JP[selected_solution];
+    self->target.joint_position = selected_jp;
+    self->target.tcp_position = selected_tcp.TCP;
     self->mode = ROBOT_MODE_JOINT_POSITION;
-    return command_status[selected_solution] == ROBOT_COMMAND_CLAMPED ? ROBOT_COMMAND_CLAMPED : ROBOT_COMMAND_OK;
+
+    return checks[selected_solution].status;
 }
 
 RobotCommandStatus ROBOT_SetTCPVelocityTarget(Robot* self, Vector3 tcp_velocity_target)
@@ -224,10 +249,39 @@ RobotCommandStatus ROBOT_SetTCPVelocityTarget(Robot* self, Vector3 tcp_velocity_
         return ROBOT_COMMAND_REJECTED;
     }
 
-    RAISE(NotImplementedError);
+    JB_result jb = ROBOT_jacobian_velcitys(self, tcp_velocity_target);
 
+    if (!jb.reachable){
+        LOG_ERROR_MSG(
+            TCP_CMD_REJECTED,
+            "TCP velocity command rejected. Robot is near a Jacobian singularity. TCP vel target: (%.3f, %.3f, %.3f), JP: (%.3f, %.3f, %.3f)\n",
+            tcp_velocity_target.x,
+            tcp_velocity_target.y,
+            tcp_velocity_target.z,
+            self->current.joint_position.x,
+            self->current.joint_position.y,
+            self->current.joint_position.z
+        );
+        return ROBOT_COMMAND_REJECTED;
+    }
 
-    // self->target.tcp_velocity = tcp_velocity_target;
-    // self->mode = ROBOT_MODE_TCP_VELOCITY;
-    return ROBOT_COMMAND_REJECTED; // Placeholder until velocity control is implemented
+    
+    if (jb.singularity) {
+        LOG_ERROR_MSG(
+            TCP_CMD_REJECTED,
+            "TCP velocity command rejected. Robot joint velocity out of range. Joint vel: (%.3f, %.3f, %.3f)\n",
+            jb.joint_velocity.x,
+            jb.joint_velocity.y,
+            jb.joint_velocity.x
+        );
+        return ROBOT_COMMAND_REJECTED;
+    }
+
+    self->target.tcp_velocity = tcp_velocity_target;
+    self->target.joint_velocity = jb.joint_velocity;
+    self->current.tcp_velocity = jb.tcp_velocity;
+
+    self->mode = ROBOT_MODE_JOINT_VELOCITY;
+
+    return ROBOT_COMMAND_OK;
 }
