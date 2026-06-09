@@ -23,6 +23,11 @@ typedef enum LinkType {
     LINK_TCP
 } LinkType;
 
+typedef enum LinkRenderMode {
+    LINK_RENDER_WIREFRAME = 0,
+    LINK_RENDER_TEXTURED
+} LinkRenderMode;
+
 typedef struct Link Link;
 
 //----------------------------- Function Prototypes --------------------------------------------------
@@ -135,6 +140,38 @@ extern Vector3 LINK_GetDimensions(const Link* self);
  * @return Vector3 the position of the end of the link, which is used to draw the next link in the chain
  */
 extern Vector3 LINK_Draw(Link* self);
+
+/**
+ * @brief 
+ * 
+ * @param self 
+ * @param mode 
+ */
+extern void LINK_SetRenderMode(Link* self, LinkRenderMode mode);
+
+/**
+ * @brief 
+ * 
+ * @param self 
+ * @param texture 
+ */
+extern void LINK_SetTexture(Link* self, Texture2D texture);
+
+/** 
+ * @brief 
+ * 
+ * @param self 
+ * @param mode 
+ */
+extern void LINK_SetRenderMode(Link* self, LinkRenderMode mode);
+
+/**
+ * @brief 
+ * 
+ * @param self 
+ * @param texture 
+ */
+extern void LINK_SetTexture(Link* self, Texture2D texture);
 
 
 /**

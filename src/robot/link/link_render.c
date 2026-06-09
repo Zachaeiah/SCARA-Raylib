@@ -8,6 +8,13 @@
 
 #include <math.h>
 
+/**
+ * @brief 
+ * 
+ * @param v 
+ * @param angle_rad 
+ * @return Vector3 
+ */
 static Vector3 RotateAroundY(Vector3 v, float angle_rad)
 {
     float c = cosf(angle_rad);
@@ -18,6 +25,112 @@ static Vector3 RotateAroundY(Vector3 v, float angle_rad)
         .y = v.y,
         .z = -v.x * s + v.z * c
     };
+}
+
+static void DrawCubeTexture(
+    Texture2D texture,
+    Vector3 position,
+    float width,
+    float height,
+    float length,
+    Color tint
+)
+{
+    float x = position.x;
+    float y = position.y;
+    float z = position.z;
+
+    float w = width / 2.0f;
+    float h = height / 2.0f;
+    float l = length / 2.0f;
+
+    rlSetTexture(texture.id);
+
+    rlBegin(RL_QUADS);
+
+        rlColor4ub(tint.r, tint.g, tint.b, tint.a);
+
+        // Front face
+        rlNormal3f(0.0f, 0.0f, 1.0f);
+        rlTexCoord2f(0.0f, 0.0f); rlVertex3f(x - w, y - h, z + l);
+        rlTexCoord2f(1.0f, 0.0f); rlVertex3f(x + w, y - h, z + l);
+        rlTexCoord2f(1.0f, 1.0f); rlVertex3f(x + w, y + h, z + l);
+        rlTexCoord2f(0.0f, 1.0f); rlVertex3f(x - w, y + h, z + l);
+
+        // Back face
+        rlNormal3f(0.0f, 0.0f, -1.0f);
+        rlTexCoord2f(1.0f, 0.0f); rlVertex3f(x - w, y - h, z - l);
+        rlTexCoord2f(1.0f, 1.0f); rlVertex3f(x - w, y + h, z - l);
+        rlTexCoord2f(0.0f, 1.0f); rlVertex3f(x + w, y + h, z - l);
+        rlTexCoord2f(0.0f, 0.0f); rlVertex3f(x + w, y - h, z - l);
+
+        // Top face
+        rlNormal3f(0.0f, 1.0f, 0.0f);
+        rlTexCoord2f(0.0f, 1.0f); rlVertex3f(x - w, y + h, z - l);
+        rlTexCoord2f(0.0f, 0.0f); rlVertex3f(x - w, y + h, z + l);
+        rlTexCoord2f(1.0f, 0.0f); rlVertex3f(x + w, y + h, z + l);
+        rlTexCoord2f(1.0f, 1.0f); rlVertex3f(x + w, y + h, z - l);
+
+        // Bottom face
+        rlNormal3f(0.0f, -1.0f, 0.0f);
+        rlTexCoord2f(1.0f, 1.0f); rlVertex3f(x - w, y - h, z - l);
+        rlTexCoord2f(0.0f, 1.0f); rlVertex3f(x + w, y - h, z - l);
+        rlTexCoord2f(0.0f, 0.0f); rlVertex3f(x + w, y - h, z + l);
+        rlTexCoord2f(1.0f, 0.0f); rlVertex3f(x - w, y - h, z + l);
+
+        // Right face
+        rlNormal3f(1.0f, 0.0f, 0.0f);
+        rlTexCoord2f(1.0f, 0.0f); rlVertex3f(x + w, y - h, z - l);
+        rlTexCoord2f(1.0f, 1.0f); rlVertex3f(x + w, y + h, z - l);
+        rlTexCoord2f(0.0f, 1.0f); rlVertex3f(x + w, y + h, z + l);
+        rlTexCoord2f(0.0f, 0.0f); rlVertex3f(x + w, y - h, z + l);
+
+        // Left face
+        rlNormal3f(-1.0f, 0.0f, 0.0f);
+        rlTexCoord2f(0.0f, 0.0f); rlVertex3f(x - w, y - h, z - l);
+        rlTexCoord2f(1.0f, 0.0f); rlVertex3f(x - w, y - h, z + l);
+        rlTexCoord2f(1.0f, 1.0f); rlVertex3f(x - w, y + h, z + l);
+        rlTexCoord2f(0.0f, 1.0f); rlVertex3f(x - w, y + h, z - l);
+
+    rlEnd();
+
+    rlSetTexture(0);
+}
+
+/**
+ * @brief 
+ * 
+ * @param self 
+ * @param local_center 
+ */
+static void LINK_DrawCubeBody(Link* self, Vector3 local_center)
+{
+    if (!self) {
+        RAISE(NullptrError);
+        return;
+    }
+
+    switch (self->render_mode) {
+        case LINK_RENDER_TEXTURED:
+            if (self->has_texture && self->texture.id != 0) {
+                DrawCubeTexture(
+                    self->texture,
+                    local_center,
+                    self->dimensions.x,
+                    self->dimensions.y,
+                    self->dimensions.z,
+                    WHITE
+                );
+            } else {
+                DrawCubeV(local_center, self->dimensions, self->color);
+            }
+            break;
+
+        case LINK_RENDER_WIREFRAME:
+        default:
+            DrawCubeWiresV(local_center, self->dimensions, BLACK);
+            break;
+    }
 }
 
 Vector3 LINK_RenderRevolute(Link* self)
@@ -67,7 +180,7 @@ Vector3 LINK_RenderRevolute(Link* self)
             local_center.z
         );
 
-        DrawCubeWiresV(Vector3Zero(), self->dimensions, BLACK);
+        LINK_DrawCubeBody(self, Vector3Zero());
 
     rlPopMatrix();
 
@@ -147,7 +260,7 @@ Vector3 LINK_RenderPrismatic(Link* self)
             local_center.z
         );
 
-        DrawCubeWiresV(Vector3Zero(), self->dimensions, BLACK);
+        LINK_DrawCubeBody(self, Vector3Zero());
 
     rlPopMatrix();
 
@@ -180,7 +293,7 @@ Vector3 LINK_RenderBase(Link* self)
         .z = self->start_world.z
     };
 
-    DrawCubeWiresV(center, self->dimensions, BLACK);
+    LINK_DrawCubeBody(self, center);
 
     DrawSphere(self->start_world, 0.08f, RED);
     DrawSphere(self->end_world, 0.08f, BLUE);
@@ -233,7 +346,7 @@ Vector3 LINK_RenderTCP(Link* self)
             0.0f
         );
 
-        DrawCubeWiresV(local_center, self->dimensions, BLACK);
+        LINK_DrawCubeBody(self, local_center);
 
     rlPopMatrix();
 

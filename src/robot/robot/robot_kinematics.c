@@ -84,14 +84,17 @@ FK_result ROBOT_forward_kinematics(Robot* robot, Vector3 target_JP)
 
 IK_result ROBOT_inverse_kinematics(Robot* robot, Vector3 target_TCP)
 {
-    LOG_MESSAGE("Calculating IK for target TCP: (%.3f, %.3f, %.3f)\n",
+    LOG_DEBUG_MSG(NO_ERROR, "Calculating IK for target TCP: (%.3f, %.3f, %.3f)\n",
         target_TCP.x,
         target_TCP.y,
         target_TCP.z
     );
 
 
-    IK_result result = {0};
+    IK_result result = {
+        .JP = { Vector3Zero(), Vector3Zero() },
+        .reachable = { 0, 0 }
+    };
 
     if (!robot ) {
         RAISE(NullptrError);
@@ -131,15 +134,27 @@ IK_result ROBOT_inverse_kinematics(Robot* robot, Vector3 target_TCP)
     const float min_reach = fabsf(l1 - l2);
     const float max_reach = l1 + l2;
 
-    if (r < IK_EPSILON || r < min_reach || r > max_reach) {
-        LOG_ERROR_MSG(TCP_CMD_REJECTED, "Target TCP is unreachable. Target TCP: (%.3f, %.3f, %.3f), Reach: %.3f, Min Reach: %.3f, Max Reach: %.3f\n",
+    if (r < min_reach) {
+        LOG_ERROR_MSG(TCP_CMD_REJECTED, "Target TCP is within minimum reach. Target TCP: (%.3f, %.3f, %.3f), Reach: %.3f, Min Reach: %.3f\n",
             target_TCP.x,
             target_TCP.y,
             target_TCP.z,
             r,
-            min_reach,
+            min_reach
+        );
+
+        return result;
+    }
+
+    if ( r > max_reach) {
+        LOG_ERROR_MSG(TCP_CMD_REJECTED, "Target TCP is beyond maximum reach. Target TCP: (%.3f, %.3f, %.3f), Reach: %.3f. Max Reach: %.3f\n",
+            target_TCP.x,
+            target_TCP.y,
+            target_TCP.z,
+            r,
             max_reach
         );
+
         return result;
     }
 

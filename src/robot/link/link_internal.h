@@ -16,6 +16,10 @@ struct Link {
     LinkType type;
     Actuator* actuator;
 
+    LinkRenderMode render_mode;
+    Texture2D texture;
+    bool has_texture;
+
     Vector3 (*draw)(Link* self);
 };
 

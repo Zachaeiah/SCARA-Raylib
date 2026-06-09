@@ -33,6 +33,10 @@ Link* LINK_Create(Vector3 dimensions, Color color, LinkType type, Actuator* actu
     self->type = type;
     self->actuator = actuator;
 
+    self->render_mode = LINK_RENDER_WIREFRAME;
+    self->texture = (Texture2D){ 0 };
+    self->has_texture = false;
+
     switch (type) {
         case LINK_BASE:
             self->draw = LINK_RenderBase;
@@ -205,6 +209,27 @@ Vector3 LINK_Draw(Link* self)
     }
 
     return self->draw(self);
+}
+
+void LINK_SetRenderMode(Link* self, LinkRenderMode mode)
+{
+    if (!self) {
+        RAISE(NullptrError);
+        return;
+    }
+
+    self->render_mode = mode;
+}
+
+void LINK_SetTexture(Link* self, Texture2D texture)
+{
+    if (!self) {
+        RAISE(NullptrError);
+        return;
+    }
+
+    self->texture = texture;
+    self->has_texture = texture.id != 0;
 }
 
 void LINK_Destroy(Link* self)

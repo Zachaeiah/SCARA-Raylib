@@ -28,7 +28,7 @@
 // ---------------------------------------------------------
 // Timing
 // ---------------------------------------------------------
-#define SCREEN_WIDTH  1600
+#define SCREEN_WIDTH  2000
 #define SCREEN_HEIGHT 900
 
 #define RENDER_HZ   120.0f
@@ -112,7 +112,7 @@ int main(void)
     }
 
     const float THETA_MAX = 170.0f * DEG2RAD;
-    const float OMEGA_MAX = 90.0f * DEG2RAD;
+    const float OMEGA_MAX = 180.0f * DEG2RAD;
     const float DISPLACEMENT_MAX = 17.00f;
     const float LIN_VEL = 10.0;
     
