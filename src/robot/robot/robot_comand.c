@@ -45,7 +45,7 @@ static JointCommandCheck CheckJointPositionTarget(Robot* self, Vector3 requested
 
     if (!IsFiniteVector3(requested_jp)) {
         LOG_ERROR_MSG(
-            JP_CMD_REJECTED,
+            JP_CMD_REJECTED_ErrorCode,
             "Joint position target rejected. Non-finite target. JP: (%5.f, %.5f, %5.f)\n",
             requested_jp.x,
             requested_jp.y,
@@ -64,8 +64,8 @@ static JointCommandCheck CheckJointPositionTarget(Robot* self, Vector3 requested
         float value = Vector3GetByJoint(result.joint_position, joint);
 
         if (!IsWithinLimitsTol(value, pos_min, pos_max)) {
-            LOG_ERROR_MSG(
-                JP_CMD_REJECTED,
+            LOG_WARN_MSG(
+                JP_CMD_REJECTED_ErrorCode,
                 "Joint position target rejected. Joint %d target: %.3f, limits: [%.3f, %.3f]\n",
                 i + 1,
                 value,
@@ -115,14 +115,10 @@ RobotCommandStatus ROBOT_SetJointPositionTarget(Robot* self, Vector3 joint_posit
 
     fk_sol = ROBOT_forward_kinematics(self, check.joint_position);
 
-    if (!fk_sol.reachable){
-        LOG_FATAL_MSG(LOGIC_ERROR, "Joint position target passed check but bot reachable\n");
-        return ROBOT_COMMAND_REJECTED;
-    }
 
     if (check.status == ROBOT_COMMAND_CLAMPED) {
         LOG_WARN_MSG(
-            JP_CMD_CLAMPED,
+            JP_CMD_CLAMPED_ErrorCode,
             "Joint position target clamped. Requested JP: (%.3f, %.3f, %.3f), clamped JP: (%.3f, %.3f, %.3f)\n",
             joint_position_target.x,
             joint_position_target.y,
@@ -151,7 +147,7 @@ RobotCommandStatus ROBOT_SetTCPPositionTarget(Robot* self, Vector3 tcp_position_
 
     if (!IsFiniteVector3(tcp_position_target)) {
         LOG_ERROR_MSG(
-            TCP_CMD_REJECTED,
+            TCP_CMD_REJECTED_ErrorCode,
             "TCP position target rejected. Non-finite target. TCP: (%.3f, %.3f, %.3f)\n",
             tcp_position_target.x,
             tcp_position_target.y,
@@ -173,7 +169,7 @@ RobotCommandStatus ROBOT_SetTCPPositionTarget(Robot* self, Vector3 tcp_position_
             joint_delta[i] = INFINITY;
 
             LOG_WARN_MSG(
-                TCP_CMD_REJECTED,
+                TCP_CMD_REJECTED_ErrorCode,
                 "IK solution %d rejected due to joint limits or invalid value. JP: (%.3f, %.3f, %.3f)\n",
                 i,
                 ik_result.JP[i].x,
@@ -203,7 +199,7 @@ RobotCommandStatus ROBOT_SetTCPPositionTarget(Robot* self, Vector3 tcp_position_
 
     if (selected_solution < 0) {
         LOG_ERROR_MSG(
-            TCP_CMD_REJECTED,
+            TCP_CMD_REJECTED_ErrorCode,
             "TCP position target rejected. No valid IK solution. Requested TCP: (%.3f, %.3f, %.3f)\n",
             tcp_position_target.x,
             tcp_position_target.y,
@@ -216,14 +212,9 @@ RobotCommandStatus ROBOT_SetTCPPositionTarget(Robot* self, Vector3 tcp_position_
     Vector3 selected_jp = checks[selected_solution].joint_position;
     FK_result selected_tcp = ROBOT_forward_kinematics(self, selected_jp);
 
-    if (!selected_tcp.reachable){
-        LOG_FATAL_MSG(LOGIC_ERROR, "Joint position target passed check but bot reachable\n");
-        return ROBOT_COMMAND_REJECTED;
-    }
-
     if (checks[selected_solution].status == ROBOT_COMMAND_CLAMPED) {
         LOG_WARN_MSG(
-            TCP_CMD_CLAMPED,
+            TCP_CMD_CLAMPED_ErrorCode,
             "TCP position target clamped. Requested TCP: (%.3f, %.3f, %.3f), achievable TCP: (%.3f, %.3f, %.3f), selected IK solution: %d\n",
             tcp_position_target.x,
             tcp_position_target.y,
@@ -253,7 +244,7 @@ RobotCommandStatus ROBOT_SetTCPVelocityTarget(Robot* self, Vector3 tcp_velocity_
 
     if (!jb.reachable){
         LOG_ERROR_MSG(
-            TCP_CMD_REJECTED,
+            TCP_CMD_REJECTED_ErrorCode,
             "TCP velocity command rejected. Robot is near a Jacobian singularity. TCP vel target: (%.3f, %.3f, %.3f), JP: (%.3f, %.3f, %.3f)\n",
             tcp_velocity_target.x,
             tcp_velocity_target.y,
@@ -268,7 +259,7 @@ RobotCommandStatus ROBOT_SetTCPVelocityTarget(Robot* self, Vector3 tcp_velocity_
     
     if (jb.singularity) {
         LOG_ERROR_MSG(
-            TCP_CMD_REJECTED,
+            TCP_CMD_REJECTED_ErrorCode,
             "TCP velocity command rejected. Robot joint velocity out of range. Joint vel: (%.3f, %.3f, %.3f)\n",
             jb.joint_velocity.x,
             jb.joint_velocity.y,

@@ -62,8 +62,9 @@ extern Actuator* Actuator_ctor(ZFilter* filter,
         actuator->Dead_Zone = Dead_Zone;
         actuator->Saturation = Saturation;
 
-    }EXCEPT(MemroyError) {
-        printf("actuator allocation failed: %s\n", Except_frame.exception->reason);
+    }EXCEPT(Mem_Failed) {
+        LOG_ERROR_MSG(Mem_Failed_ErrorCode, "Memory allocation failed for Actuator");
+
 
         if (actuator) Actuator_dtor(actuator);
 
@@ -72,7 +73,7 @@ extern Actuator* Actuator_ctor(ZFilter* filter,
         RAISE(Actuator_Failed);
     }EXCEPT(NullptrError) {
         
-        printf("Actuator_ctor: filter pointer is NULL: %s\n", Except_frame.exception->reason);
+        LOG_ERROR_MSG(Actuator_Failed_ErrorCode, "Actuator_ctor: filter pointer is NULL");
         if (actuator) Actuator_dtor(actuator);
 
         // RAISE the Actuator_Failed exception to indicate 

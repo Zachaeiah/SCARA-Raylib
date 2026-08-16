@@ -181,7 +181,7 @@ IK_result ROBOT_inverse_kinematics(Robot* robot, Vector3 target_TCP)
     const float max_reach = l1 + l2;
 
     if (r < min_reach) {
-        LOG_ERROR_MSG(TCP_CMD_REJECTED, "Target TCP is within minimum reach. Target TCP: (%.3f, %.3f, %.3f), Reach: %.3f, Min Reach: %.3f\n",
+        LOG_ERROR_MSG(TCP_CMD_REJECTED_ErrorCode, "Target TCP is within minimum reach. Target TCP: (%.3f, %.3f, %.3f), Reach: %.3f, Min Reach: %.3f\n",
             target_TCP.x,
             target_TCP.y,
             target_TCP.z,
@@ -193,7 +193,7 @@ IK_result ROBOT_inverse_kinematics(Robot* robot, Vector3 target_TCP)
     }
 
     if ( r > max_reach) {
-        LOG_ERROR_MSG(TCP_CMD_REJECTED, "Target TCP is beyond maximum reach. Target TCP: (%.3f, %.3f, %.3f), Reach: %.3f. Max Reach: %.3f\n",
+        LOG_ERROR_MSG(TCP_CMD_REJECTED_ErrorCode, "Target TCP is beyond maximum reach. Target TCP: (%.3f, %.3f, %.3f), Reach: %.3f. Max Reach: %.3f\n",
             target_TCP.x,
             target_TCP.y,
             target_TCP.z,
@@ -207,7 +207,7 @@ IK_result ROBOT_inverse_kinematics(Robot* robot, Vector3 target_TCP)
     const float q3 = target_TCP.y;
 
     if (!joint_pos_in_range(robot, ROBOT_JOINT_3, q3)) {
-        LOG_ERROR_MSG(TCP_CMD_REJECTED, "Target TCP is unreachable. Target TCP: (%.3f, %.3f, %.3f), Joint 3 angle: %.3f\n",
+        LOG_ERROR_MSG(TCP_CMD_REJECTED_ErrorCode, "Target TCP is unreachable. Target TCP: (%.3f, %.3f, %.3f), Joint 3 angle: %.3f\n",
             target_TCP.x,
             target_TCP.y,
             target_TCP.z,
@@ -239,7 +239,7 @@ IK_result ROBOT_inverse_kinematics(Robot* robot, Vector3 target_TCP)
     q1[RIGHT_SOLUTION] = beta - alpha;
 
     if(!joint_pos_in_range(robot, ROBOT_JOINT_2, q1[LEFT_SOLUTION])) {
-        LOG_ERROR_MSG(TCP_CMD_REJECTED, "Left IK solution is out of joint limits. Target TCP: (%.3f, %.3f, %.3f), Joint 1 angle: %.3f\n",
+        LOG_ERROR_MSG(TCP_CMD_REJECTED_ErrorCode, "Left IK solution is out of joint limits. Target TCP: (%.3f, %.3f, %.3f), Joint 1 angle: %.3f\n",
             target_TCP.x,
             target_TCP.y,
             target_TCP.z,
@@ -248,7 +248,7 @@ IK_result ROBOT_inverse_kinematics(Robot* robot, Vector3 target_TCP)
     }
 
     if(!joint_pos_in_range(robot, ROBOT_JOINT_2, q1[RIGHT_SOLUTION])) {
-        LOG_ERROR_MSG(TCP_CMD_REJECTED, "Right IK solution is out of joint limits. Target TCP: (%.3f, %.3f, %.3f), Joint 1 angle: %.3f\n",
+        LOG_ERROR_MSG(TCP_CMD_REJECTED_ErrorCode, "Right IK solution is out of joint limits. Target TCP: (%.3f, %.3f, %.3f), Joint 1 angle: %.3f\n",
             target_TCP.x,
             target_TCP.y,
             target_TCP.z,
@@ -271,7 +271,7 @@ IK_result ROBOT_inverse_kinematics(Robot* robot, Vector3 target_TCP)
         result.reachable[i] = jp_in_range(robot, jp);
 
         if (!result.reachable[i]) {
-            LOG_ERROR_MSG(TCP_CMD_REJECTED, "IK solution %d is out of joint limits. Joint angles: J1: %.3f, J2: %.3f, J3: %.3f\n",
+            LOG_ERROR_MSG(TCP_CMD_REJECTED_ErrorCode, "IK solution %d is out of joint limits. Joint angles: J1: %.3f, J2: %.3f, J3: %.3f\n",
                 i,
                 jp.x,
                 jp.y,
@@ -282,7 +282,7 @@ IK_result ROBOT_inverse_kinematics(Robot* robot, Vector3 target_TCP)
     }
 
     if (!result.reachable[LEFT_SOLUTION] && !result.reachable[RIGHT_SOLUTION]) {
-        LOG_ERROR_MSG(TCP_CMD_REJECTED, "IK solutions are unreachable due to joint limits. Target TCP: (%.3f, %.3f, %.3f)\n",
+        LOG_ERROR_MSG(TCP_CMD_REJECTED_ErrorCode, "IK solutions are unreachable due to joint limits. Target TCP: (%.3f, %.3f, %.3f)\n",
             target_TCP.x,
             target_TCP.y,
             target_TCP.z

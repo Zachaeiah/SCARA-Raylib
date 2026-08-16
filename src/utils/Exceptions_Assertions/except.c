@@ -12,7 +12,6 @@
 const T NullptrError        = { "Null pointer" };
 const T ValueError          = { "Invalid value" };
 const T ZeroDivisionError   = { "Zero division detected" };
-const T MemroyError         = { "Memory allocation failed" };
 const T NotImplementedError = { "Method not implemented" };
 
 //======================================================== Data =======================================================

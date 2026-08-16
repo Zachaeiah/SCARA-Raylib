@@ -1,4 +1,5 @@
 #include "robot.h"
+#include "utils/Logger/logger.h"
 
 typedef enum RobotCommandStatus {
     ROBOT_COMMAND_OK = 0,
@@ -29,16 +30,6 @@ extern void ROBOT_SetJointLimits(
  * @return RobotCommandStatus indicating whether the command was accepted, clamped, or rejected based on the robot's limits and current state.
  */
 extern RobotCommandStatus ROBOT_SetJointPositionTarget(Robot* self, Vector3 joint_position_target);
-
-/**
- * @brief Sets the target velocity for a specific joint.
- * 
- * @param self A pointer to the Robot instance.
- * @param joint_velocity_target The target velocity for the joint.
- * 
- * @return RobotCommandStatus indicating whether the command was accepted, clamped, or rejected based on the robot's limits and current state.
- */
-extern RobotCommandStatus ROBOT_SetJointVelocityTarget(Robot* self, Vector3 joint_velocity_target);
 
 /**
  * @brief Sets the target position for the robot's TCP.

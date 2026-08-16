@@ -3,12 +3,13 @@
 
 #include <stdint.h>
 #include "Control/Ztransform/Ztransform.h"
+#include "utils/Exceptions_Assertions/assert.h"
 #include "utils/Exceptions_Assertions/except.h"
+#include "utils/Logger/logger.h"
 
-/**
- * @brief Exception object indicating actuator failure, used for error handling in actuator operations.
- */
-extern const Except_t Actuator_Failed;
+
+extern const Except_t Actuator_Failed; // Represents Actuator failure
+extern const ErrorType Actuator_Failed_ErrorCode; /**< Represents Actuator failure error code. */
 
 /**
  * @brief The Actuator structure, which applies a ZFilter to the input and includes dead zone and saturation limits.

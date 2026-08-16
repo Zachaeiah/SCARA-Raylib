@@ -6,6 +6,9 @@
 #include "utils/Exceptions_Assertions/except.h"
 #include "mem.h"
 
+const Except_t Mem_Failed = { "Memory allocation failed" };
+const Except_t Mem_Free_Failed = { "Memory free failed" };
+
 /**
  * @brief Forces proper alignment for all allocations.
  */
@@ -77,8 +80,8 @@ void Mem_free(void *ptr, const char *file, int line)
         (bp = find(ptr)) == NULL ||
         bp->free)
     {
-        if (!file) RAISE(MemroyError);
-        else Except_raise(&MemroyError, file, line);
+        if (!file) RAISE(Mem_Free_Failed);
+        else Except_raise(&Mem_Free_Failed, file, line);
     }
 
     /* Optional debug pattern (detect use-after-free) */
@@ -108,8 +111,8 @@ void* Mem_resize(void *ptr, uint64_t nbytes, const char *file, int line)
         (bp = find(ptr)) == NULL ||
         bp->free)
     {
-        if (!file) RAISE(MemroyError);
-        else Except_raise(&MemroyError, file, line);
+        if (!file) RAISE(Mem_Failed);
+        else Except_raise(&Mem_Failed, file, line);
     }
 
     /* Allocate new */
@@ -135,8 +138,8 @@ void* Mem_calloc(uint64_t count, uint64_t nbytes, const char *file, int line)
 
     /* overflow protection */
     if (count > UINT64_MAX / nbytes){
-         if (!file) RAISE(MemroyError);
-        else Except_raise(&MemroyError, file, line);
+         if (!file) RAISE(Mem_Failed);
+        else Except_raise(&Mem_Failed, file, line);
     }
 
     uint64_t total = count * nbytes;
@@ -186,8 +189,8 @@ void* Mem_alloc(uint64_t nbytes, const char *file, int line)
 
     /* Overflow protection */
     if (nbytes > UINT64_MAX - sizeof(union aligned)) {
-        if (!file) RAISE(MemroyError);
-        else Except_raise(&MemroyError, file, line);
+        if (!file) RAISE(Mem_Failed);
+        else Except_raise(&Mem_Failed, file, line);
     }
 
     /* Align size */
@@ -197,8 +200,8 @@ void* Mem_alloc(uint64_t nbytes, const char *file, int line)
     /* Allocate */
     void *ptr = malloc(nbytes);
     if (!ptr) {
-        if (!file) RAISE(MemroyError);
-        else Except_raise(&MemroyError, file, line);
+        if (!file) RAISE(Mem_Failed);
+        else Except_raise(&Mem_Failed, file, line);
     }
 
     /* Debug fill (helps catch uninitialized use) */
@@ -208,8 +211,8 @@ void* Mem_alloc(uint64_t nbytes, const char *file, int line)
     struct descriptor *bp = dalloc(ptr, nbytes, file, line);
     if (!bp) {
         free(ptr);
-         if (!file) RAISE(MemroyError);
-        else Except_raise(&MemroyError, file, line);
+         if (!file) RAISE(Mem_Failed);
+        else Except_raise(&Mem_Failed, file, line);
     }
 
     /* Insert into hash table */

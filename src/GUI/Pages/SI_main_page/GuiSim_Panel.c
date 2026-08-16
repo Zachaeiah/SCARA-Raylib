@@ -443,10 +443,10 @@ void GUI_SIM_PANEL_Update(GuiSimPanel* panel, Robot* robot)
         RobotCommandStatus status = ROBOT_SetJointPositionTarget(robot, panel->CommandedState.joint_position);
 
         if (status == ROBOT_COMMAND_REJECTED) {
-            LOG_ERROR_MSG(JP_CMD_REJECTED, "Joint position target command was rejected. Target may be out of bounds.\n");
+            LOG_ERROR_MSG(JP_CMD_REJECTED_ErrorCode, "Joint position target command was rejected. Target may be out of bounds.\n");
         }
         else if (status == ROBOT_COMMAND_CLAMPED) {
-            LOG_WARN_MSG(JP_CMD_CLAMPED, "Joint position target command was clamped. Target is near bounds.\n");
+            LOG_WARN_MSG(JP_CMD_CLAMPED_ErrorCode, "Joint position target command was clamped. Target is near bounds.\n");
         }
 
     
@@ -465,10 +465,10 @@ void GUI_SIM_PANEL_Update(GuiSimPanel* panel, Robot* robot)
         RobotCommandStatus status = ROBOT_SetTCPPositionTarget(robot, panel->CommandedState.tcp_position);
 
         if (status == ROBOT_COMMAND_REJECTED) {
-            LOG_ERROR_MSG(TCP_CMD_REJECTED, "TCP position target command was rejected. Target may be out of bounds.\n");
+            LOG_ERROR_MSG(TCP_CMD_REJECTED_ErrorCode, "TCP position target command was rejected. Target may be out of bounds.\n");
         }
         else if (status == ROBOT_COMMAND_CLAMPED) {
-            LOG_WARN_MSG(TCP_CMD_CLAMPED, "TCP position target command was clamped. Target is near bounds.\n");
+            LOG_WARN_MSG(TCP_CMD_CLAMPED_ErrorCode, "TCP position target command was clamped. Target is near bounds.\n");
         }
 
         panel->TCP_joint_target_requested = false;

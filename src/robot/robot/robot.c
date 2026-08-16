@@ -211,7 +211,7 @@ void ROBOT_SetJointLimits(
         float vel_max = joint_velocity_limits[i][ROBOT_LIMIT_MAX];
 
         if (!ROBOT_IsValidLimitPair(jp_min, jp_max)){
-            LOG_ERROR_MSG(JP_RANGE, "Joint position limit command was rejected. Target may be out of bounds. Joint %d, limits: [%f, %f]\n",
+            LOG_ERROR_MSG(JP_RANGE_ErrorCode, "Joint position limit command was rejected. Target may be out of bounds. Joint %d, limits: [%f, %f]\n",
                 i + 1,
                 jp_min,
                 jp_max
@@ -220,7 +220,7 @@ void ROBOT_SetJointLimits(
         }
 
         if (!ROBOT_IsValidLimitPair(vel_min, vel_max)){
-            LOG_ERROR_MSG(JP_RANGE, "Joint velocity limit command was rejected. Target may be out of bounds. Joint %d limits: [%f, %f]\n",
+            LOG_ERROR_MSG(JP_RANGE_ErrorCode, "Joint velocity limit command was rejected. Target may be out of bounds. Joint %d limits: [%f, %f]\n",
                 i + 1,
                 vel_min,
                 vel_max

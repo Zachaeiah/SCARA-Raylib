@@ -58,8 +58,8 @@ ZFilter* ZFilter_ctor(const float *b_in, uint32_t nb,
             filter->a[i] = a_in[i] / a0;
         }
 
-    } EXCEPT(MemroyError) {
-        LOG_ERROR_MSG(NO_ERROR, "ZFilter allocation failed: %s", Except_frame.exception->reason);
+    } EXCEPT(Mem_Failed) {
+        LOG_ERROR_MSG(Zfilter_Failed_ErrorCode, "ZFilter allocation failed: %s", Except_frame.exception->reason);
 
         if (filter) ZFilter_dtor(filter);
         RAISE(Zfilter_Failed);
@@ -128,9 +128,11 @@ void ZFilter_reset(ZFilter *f)
 void ZFilter_dtor(ZFilter *f)
 {
     if (!f)
+        RAISE(NullptrError);
 
     LOG_DEBUG_MSG(NO_ERROR, "freeing Zfilter");
 
+    
     FREE(f->x_hist);
     FREE(f->y_hist);
     FREE(f->b);

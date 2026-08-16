@@ -3,8 +3,9 @@
 #include "utils/Exceptions_Assertions/assert.h"
 #include "utils/Exceptions_Assertions/except.h"
 #include "utils/MemAllocator/mem.h"
-
 #include <stdarg.h>
+
+const Except_t Controller_failed = {"Controller error"};
 
 Controller* Controller_create(const ControllerType* type, ...)
 {
@@ -35,34 +36,21 @@ Controller* Controller_create(const ControllerType* type, ...)
 
     if (type->vtable->ctor) {
         va_list args;
-        int ctor_failed = 0;
-        const Except_t* caught = NULL;
-
         va_start(args, type);
 
         TRY {
-            LOG_DEBUG_MSG(NO_ERROR, "createing controller with Vtable->ctor");
             self->type->vtable->ctor(self, &args);
         }
         ELSE {
-            ctor_failed = 1;
-            caught = Except_frame.exception;
+            LOG_ERROR_MSG(Controller_ErrorCode, "failed to create controller");
+            Controller_destroy(self);
+            RAISE(Controller_failed);
         }
         FINALLY {
             va_end(args);
         }
         END_TRY;
 
-        if (ctor_failed) {
-            LOG_ERROR_MSG(1, "faild to crate controller");
-            Controller_destroy(self);
-
-            if (caught) {
-                RAISE(*caught);
-            }
-
-            RAISE(NotImplementedError);
-        }
     }
 
     return self;
@@ -70,51 +58,29 @@ Controller* Controller_create(const ControllerType* type, ...)
 
 float Controller_update(Controller* self, float x)
 {
-    if (!self) {
-        return 0.0f;
-    }
+    if (!self) RAISE(NullptrError);
 
-    assert_debug(self->type);
-    assert_debug(self->type->vtable);
-
-    if (!self->type->vtable->update) {
-        RAISE(NotImplementedError);
-    }
+    assert_debug(self->type->vtable->update);
 
     return self->type->vtable->update(self, x);
 }
 
 void Controller_reset(Controller* self)
 {
-    if (!self) {
-        RAISE(NullptrError);
-    }
+    if (!self) RAISE(NullptrError);
 
-    assert_debug(self->type);
-    assert_debug(self->type->vtable);
+    assert_debug(self->type->vtable->reset);
 
-    /*
-        Reset can be optional.
-        If a controller has no state to reset, no-op is fine.
-    */
-    if (self->type->vtable->reset) {
-        self->type->vtable->reset(self);
-    }
-
-    LOG_INFO_MSG(NO_ERROR, "Reseting Controller");
+    self->type->vtable->reset(self);
 }
 
 void Controller_destroy(Controller* self)
 {
-    if (!self) {
-        return;
-    }
+    if (!self) RAISE(NullptrError);
 
-    LOG_DEBUG_MSG(NO_ERROR, "Destroying Contoller");
+    assert_debug(self->type->vtable->dtor);
 
-    if (self->type && self->type->vtable && self->type->vtable->dtor) {
-        self->type->vtable->dtor(self);
-    }
+    self->type->vtable->dtor(self);
 
     FREE(self);
 }

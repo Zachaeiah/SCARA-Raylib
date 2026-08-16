@@ -14,12 +14,7 @@ extern "C" {
 extern FILE* flog; /**< File pointer for logging output. */
 
 extern ErrorType NO_ERROR; /**< Represents no error condition. */
-extern ErrorType JP_RANGE; /**< Represents joint position out of range. */
-extern ErrorType LOGIC_ERROR; /**< contradictory resullts */
-extern ErrorType JP_CMD_CLAMPED; /**< Represents clamped joint position command. */
-extern ErrorType JP_CMD_REJECTED; /**< Represents rejected joint position command. */
-extern ErrorType TCP_CMD_CLAMPED; /**< Represents clamped TCP command. */
-extern ErrorType TCP_CMD_REJECTED; /**< Represents rejected TCP command. */
+
 
 /**
  * @brief Initialize the logger file.

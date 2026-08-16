@@ -21,12 +21,18 @@
 #include "utils/Exceptions_Assertions/except.h"
 #include "GUI/Pages/SI_main_page/GuiSim_Panel.h"
 
-ErrorType JP_CMD_CLAMPED = 1; /**< Represents clamped joint position command. */
-ErrorType TCP_CMD_CLAMPED = 2; /**< Represents clamped TCP command. */
-ErrorType JP_CMD_REJECTED = 3; /**< Represents rejected joint position command. */
-ErrorType TCP_CMD_REJECTED = 4; /**< Represents rejected TCP command. */
-ErrorType LOGIC_ERROR = 5; /**< contradictory resullts */
+const ErrorType JP_CMD_CLAMPED_ErrorCode = 1;
+const ErrorType JP_CMD_REJECTED_ErrorCode = 2;
+const ErrorType JP_RANGE_ErrorCode = 3;
 
+const ErrorType TCP_CMD_CLAMPED_ErrorCode = 4;
+const ErrorType TCP_CMD_REJECTED_ErrorCode = 5;
+
+const ErrorType Mem_Failed_ErrorCode = 6; /**< Represents memory allocation failure. */
+const ErrorType Mem_Free_Failed_ErrorCode = 7; /**< Represents memory free failure error code. */
+const ErrorType Zfilter_Failed_ErrorCode = 8; /**< Represents Z-Filter failure error code. */
+const ErrorType Controller_ErrorCode = 9; /**< Represents a generic controller error code. */
+const ErrorType Actuator_Failed_ErrorCode = 10; /**< Represents Actuator failure error code. */
 
 
 

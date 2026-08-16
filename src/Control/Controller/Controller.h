@@ -1,7 +1,12 @@
 #ifndef CONTROLLER_H_
 #define CONTROLLER_H_
 
+#include "utils/Exceptions_Assertions/assert.h"
 #include "utils/Exceptions_Assertions/except.h"
+#include "utils/Logger/logger.h"
+
+extern const Except_t Controller_failed; /**< Represents a generic controller error. */
+extern const ErrorType Controller_ErrorCode; /**< Represents a generic controller error code. */
 
 typedef struct Controller Controller;
 typedef struct ControllerType ControllerType;

@@ -9,6 +9,13 @@ extern "C" {
 #include "Robot/link/link.h"
 #include "raylib.h"
 
+extern const ErrorType JP_CMD_CLAMPED_ErrorCode; 
+extern const ErrorType JP_CMD_REJECTED_ErrorCode; 
+extern const ErrorType JP_RANGE_ErrorCode;
+
+extern const ErrorType TCP_CMD_CLAMPED_ErrorCode;
+extern const ErrorType TCP_CMD_REJECTED_ErrorCode;
+    
 // Forward declarations
 typedef struct Robot Robot;
 

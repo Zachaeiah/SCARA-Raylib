@@ -20,11 +20,9 @@ typedef struct T {
     const char* reason;  // Reason for the exception
 } T;
 
-
 extern const T NullptrError;
 extern const T ValueError;
 extern const T ZeroDivisionError;
-extern const T MemroyError;
 extern const T NotImplementedError;
 
 //======================================================== Exception Frame ======================================================

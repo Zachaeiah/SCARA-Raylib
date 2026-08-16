@@ -1,8 +1,17 @@
 #ifndef MEM_INCLUDED
 #define MEM_INCLUDED
 
+#include "stdlib.h"
+#include "stddef.h"
+#include "utils/Exceptions_Assertions/assert.h"
 #include "utils/Exceptions_Assertions/except.h"
+#include "utils/Logger/logger.h"
 #include <stdint.h>
+
+extern const Except_t Mem_Failed; /**< Memory allocation failed */
+extern const Except_t Mem_Free_Failed; /**< Memory free failed */
+extern const ErrorType Mem_Failed_ErrorCode; /**< Represents memory allocation failure error code. */
+extern const ErrorType Mem_Free_Failed_ErrorCode; /**< Represents memory free failure error code. */
 
 /**
  * @brief Allocate memory block.
@@ -75,28 +84,28 @@ void Mem_dumpLeaks(void);
 /**
  * @brief Allocate raw memory
  *
- * @raise MemroyError
+ * @raise Mem_Failed
  */
 #define ALLOC(nbytes) Mem_alloc((nbytes), __FILE__, __LINE__)
 
 /**
  * @brief Allocate zeroed memory
  *
- * @raise MemroyError
+ * @raise Mem_Failed
  */
 #define CALLOC(count, nbytes) Mem_calloc((count), (nbytes), __FILE__, __LINE__)
 
 /**
  * @brief Allocate struct (uninitialized)
  *
- * @raise MemroyError
+ * @raise Mem_Failed
  */
 #define NEW(p) ((p) = ALLOC(sizeof *(p)))
 
 /**
  * @brief Allocate struct (zeroed)
  *
- * @raise MemroyError
+ * @raise Mem_Failed
  */
 #define NEW0(p) ((p) = CALLOC(1, sizeof *(p)))
 
