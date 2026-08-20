@@ -20,6 +20,7 @@
 #include "utils/Logger/logger.h"
 #include "utils/Exceptions_Assertions/except.h"
 #include "GUI/Pages/SI_main_page/GuiSim_Panel.h"
+#include "GUI/ploting/XY_plot/xy_plot.h"
 
 const ErrorType JP_CMD_CLAMPED_ErrorCode = 1;
 const ErrorType JP_CMD_REJECTED_ErrorCode = 2;
@@ -33,9 +34,6 @@ const ErrorType Mem_Free_Failed_ErrorCode = 7; /**< Represents memory free failu
 const ErrorType Zfilter_Failed_ErrorCode = 8; /**< Represents Z-Filter failure error code. */
 const ErrorType Controller_ErrorCode = 9; /**< Represents a generic controller error code. */
 const ErrorType Actuator_Failed_ErrorCode = 10; /**< Represents Actuator failure error code. */
-
-
-
 
 // ---------------------------------------------------------
 // Timing
@@ -514,6 +512,40 @@ void DrawWorldAxes3D(float length)
 // ---------------------------------------------------------
 void UpdateDrawFrame(void)
 {
+
+    float x[] = { 0.37f, 1.2f, 2.8f, 4.63f };
+    float y[] = { -1.4f, 0.3f, 2.2f, 3.7f };
+
+    size_t count = 5;
+
+    XYPlot plot;
+
+    XYPlot_Init(
+        &plot,
+        (Vector2){ 1550, 300 },  // Bottom-left
+        400,                     // Width
+        250                      // Height
+    );
+
+    XYPlot_SetRange(
+        &plot,
+        0.0f, 10.0f,
+        -2.0f, 4.0f
+    );
+
+    XYPlot_SetGrid(
+        &plot,
+        1.0f,
+        1.0f,
+        5
+    );
+
+    XYPlot_SetLabels(
+        &plot,
+        "Time (s)",
+        "Position (deg)"
+    );
+
     // Update camera (simple orbital rotation around target)
     UpdateCamera(&camera, CAMERA_ORBITAL);
 
@@ -534,6 +566,11 @@ void UpdateDrawFrame(void)
 
         // Draw GUI on top of 3D view
         GUI_SIM_PANEL_Draw(&gui_sim_panel);
+
+        // Draw graph on top of GUI
+        XYPlot_Draw(&plot, x, y, count, RED);
+
+
 
     EndDrawing();
 }
