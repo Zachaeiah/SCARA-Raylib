@@ -28,7 +28,8 @@ typedef enum LinkRenderMode {
     LINK_RENDER_TEXTURED
 } LinkRenderMode;
 
-typedef struct Link Link;
+#define L Link
+typedef struct L *L;
 
 //----------------------------- Function Prototypes --------------------------------------------------
 
@@ -41,7 +42,7 @@ typedef struct Link Link;
  * @param actuator the actuator for the link
  * @return Link* pointer to the constructed link instance
  */
-Link* LINK_Create(Vector3 dimensions, Color color, LinkType type, Actuator actuator);
+L LINK_Create(Vector3 dimensions, Color color, LinkType type, Actuator actuator);
 
 /**
  * @brief will update the link with a new angle input and return the speed output from the actuator
@@ -50,7 +51,7 @@ Link* LINK_Create(Vector3 dimensions, Color color, LinkType type, Actuator actua
  * @param x_in the input angle to update the link with
  * @return float the output speed from the actuator after applying the input angle
  */
-extern float LINK_UpdateActuator(Link* self, const float x_in);
+extern float LINK_UpdateActuator(L self, const float x_in);
 
 /**
  * @brief 
@@ -59,7 +60,7 @@ extern float LINK_UpdateActuator(Link* self, const float x_in);
  * @param joint_velocity 
  * @param dt 
  */
-extern void LINK_IntegrateJointPosition(Link* self, float joint_velocity, float dt);
+extern void LINK_IntegrateJointPosition(L self, float joint_velocity, float dt);
 
 /**
  * @brief 
@@ -67,7 +68,7 @@ extern void LINK_IntegrateJointPosition(Link* self, float joint_velocity, float 
  * @param self 
  * @param joint_position 
  */
-extern void  LINK_SetJointPosition(Link* self, float joint_position);
+extern void  LINK_SetJointPosition(L self, float joint_position);
 
 /**
  * @brief 
@@ -75,7 +76,7 @@ extern void  LINK_SetJointPosition(Link* self, float joint_position);
  * @param self 
  * @return float 
  */
-extern float LINK_GetJointPosition(const Link* self);
+extern float LINK_GetJointPosition(const L self);
 
 /**
  * @brief 
@@ -83,7 +84,7 @@ extern float LINK_GetJointPosition(const Link* self);
  * @param self 
  * @param start_world 
  */
-extern void LINK_SetStart(Link* self, Vector3 start_world);
+extern void LINK_SetStart(L self, Vector3 start_world);
 
 /**
  * @brief 
@@ -91,7 +92,7 @@ extern void LINK_SetStart(Link* self, Vector3 start_world);
  * @param self 
  * @param end_world 
  */
-extern void LINK_SetEnd(Link* self, Vector3 end_world);
+extern void LINK_SetEnd(L self, Vector3 end_world);
 
 /**
  * @brief 
@@ -99,7 +100,7 @@ extern void LINK_SetEnd(Link* self, Vector3 end_world);
  * @param self 
  * @param heading_world_rad 
  */
-extern void LINK_SetHeadingWorld(Link* self, float heading_world_rad);
+extern void LINK_SetHeadingWorld(L self, float heading_world_rad);
 
 /**
  * @brief 
@@ -107,7 +108,7 @@ extern void LINK_SetHeadingWorld(Link* self, float heading_world_rad);
  * @param self 
  * @return Vector3 
  */
-extern Vector3 LINK_GetStart(const Link* self);
+extern Vector3 LINK_GetStart(const L self);
 
 /**
  * @brief 
@@ -115,7 +116,7 @@ extern Vector3 LINK_GetStart(const Link* self);
  * @param self 
  * @return Vector3 
  */
-extern Vector3 LINK_GetEnd(const Link* self);
+extern Vector3 LINK_GetEnd(const L self);
 
 /**
  * @brief 
@@ -123,7 +124,7 @@ extern Vector3 LINK_GetEnd(const Link* self);
  * @param self 
  * @return float 
  */
-extern float LINK_GetHeadingWorld(const Link* self);
+extern float LINK_GetHeadingWorld(const L self);
 
 /**
  * @brief 
@@ -131,7 +132,7 @@ extern float LINK_GetHeadingWorld(const Link* self);
  * @param self 
  * @return Vector3 
  */
-extern Vector3 LINK_GetDimensions(const Link* self);
+extern Vector3 LINK_GetDimensions(const L self);
 
 /**
  * @brief will draw the link using raylib
@@ -139,7 +140,7 @@ extern Vector3 LINK_GetDimensions(const Link* self);
  * @param self pointer to the link instance
  * @return Vector3 the position of the end of the link, which is used to draw the next link in the chain
  */
-extern Vector3 LINK_Draw(Link* self);
+extern Vector3 LINK_Draw(L self);
 
 /**
  * @brief 
@@ -147,7 +148,7 @@ extern Vector3 LINK_Draw(Link* self);
  * @param self 
  * @param mode 
  */
-extern void LINK_SetRenderMode(Link* self, LinkRenderMode mode);
+extern void LINK_SetRenderMode(L self, LinkRenderMode mode);
 
 /**
  * @brief 
@@ -155,7 +156,7 @@ extern void LINK_SetRenderMode(Link* self, LinkRenderMode mode);
  * @param self 
  * @param texture 
  */
-extern void LINK_SetTexture(Link* self, Texture2D texture);
+extern void LINK_SetTexture(L self, Texture2D texture);
 
 /** 
  * @brief 
@@ -163,7 +164,7 @@ extern void LINK_SetTexture(Link* self, Texture2D texture);
  * @param self 
  * @param mode 
  */
-extern void LINK_SetRenderMode(Link* self, LinkRenderMode mode);
+extern void LINK_SetRenderMode(L self, LinkRenderMode mode);
 
 /**
  * @brief 
@@ -171,7 +172,7 @@ extern void LINK_SetRenderMode(Link* self, LinkRenderMode mode);
  * @param self 
  * @param texture 
  */
-extern void LINK_SetTexture(Link* self, Texture2D texture);
+extern void LINK_SetTexture(L self, Texture2D texture);
 
 
 /**
@@ -179,8 +180,9 @@ extern void LINK_SetTexture(Link* self, Texture2D texture);
  * 
  * @param self pointer to the link instance
  */
-extern void LINK_Destroy(Link* self);
+extern void LINK_Destroy(L self);
 
+#undef L
 
 #ifdef __cplusplus
 }

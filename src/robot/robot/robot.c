@@ -144,7 +144,7 @@ static bool ROBOT_IsValidLimitPair(float min_limit, float max_limit)
  * @return Robot* pointer to the constructed Robot instance
  */
 Robot* ROBOT_Create(Controller* controllers[ROBOT_NUM_CTRLS],
-                    Link* links[ROBOT_NUM_LINKS])
+                    Link links[ROBOT_NUM_LINKS])
 {
     if (!controllers || !links) {
         RAISE(NullptrError);
@@ -494,7 +494,7 @@ void ROBOT_VelocityLoop(Robot* self, float dt)
         RobotLinkIndex link_index = LinkIndexFromJoint(joint);
         RobotControllerIndex ctrl_index = VelocityControllerFromJoint(joint);
 
-        Link* link = self->links[link_index];
+        Link link = self->links[link_index];
 
         float target_velocity = Vector3GetByJoint(self->target.joint_velocity, joint);
         float current_velocity = Vector3GetByJoint(self->current.joint_velocity, joint);

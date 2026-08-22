@@ -99,10 +99,10 @@ Actuator actuator1 = NULL;
 Actuator actuator2 = NULL;
 Actuator actuator3 = NULL;
 
-Link* link1 = NULL;
-Link* link2 = NULL;
-Link* link3 = NULL;
-Link* link4 = NULL;
+Link link1 = NULL;
+Link link2 = NULL;
+Link link3 = NULL;
+Link link4 = NULL;
 
 static GuiSimPanel gui_sim_panel;
 
@@ -182,7 +182,7 @@ int main(void)
     PID3_pos = Controller_create(&PIDController_Type, POSITION_CONTROLLER_NUM, POSITION_CONTROLLER_NUM_LEN, POSITION_CONTROLLER_DEN, POSITION_CONTROLLER_DEN_LEN);
 
     Controller* controllers[] = {PID1_pos, PID2_pos, PID3_pos, PID1_vel, PID2_vel, PID3_vel,};
-    Link* links[ROBOT_NUM_LINKS] = {link1, link2, link3, link4};
+    Link links[ROBOT_NUM_LINKS] = {link1, link2, link3, link4};
     
     // setup scara robot with simple setup for testing
     SCARA = ROBOT_Create(controllers, links);

@@ -97,9 +97,9 @@ FK_result ROBOT_forward_kinematics(Robot* robot, Vector3 target_JP)
     }
 
 
-    Link* link2 = robot->links[ROBOT_LINK_2];
-    Link* link3 = robot->links[ROBOT_LINK_3];
-    Link* link4 = robot->links[ROBOT_LINK_4];
+    Link link2 = robot->links[ROBOT_LINK_2];
+    Link link3 = robot->links[ROBOT_LINK_3];
+    Link link4 = robot->links[ROBOT_LINK_4];
 
     if (!link2 || !link3 || !link4) {
         return result;
@@ -147,9 +147,9 @@ IK_result ROBOT_inverse_kinematics(Robot* robot, Vector3 target_TCP)
         return result;
     }
 
-    Link* link2 = robot->links[ROBOT_LINK_2];
-    Link* link3 = robot->links[ROBOT_LINK_3];
-    Link* link4 = robot->links[ROBOT_LINK_4];
+    Link link2 = robot->links[ROBOT_LINK_2];
+    Link link3 = robot->links[ROBOT_LINK_3];
+    Link link4 = robot->links[ROBOT_LINK_4];
 
     if (!link2 || !link3 || !link4) {
         RAISE(NullptrError);

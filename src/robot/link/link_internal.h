@@ -20,12 +20,12 @@ struct Link {
     Texture2D texture;
     bool has_texture;
 
-    Vector3 (*draw)(Link* self);
+    Vector3 (*draw)(Link self);
 };
 
-Vector3 LINK_RenderBase(Link* self);
-Vector3 LINK_RenderRevolute(Link* self);
-Vector3 LINK_RenderPrismatic(Link* self);
-Vector3 LINK_RenderTCP(Link* self);
+Vector3 LINK_RenderBase(Link self);
+Vector3 LINK_RenderRevolute(Link self);
+Vector3 LINK_RenderPrismatic(Link self);
+Vector3 LINK_RenderTCP(Link self);
 
 #endif

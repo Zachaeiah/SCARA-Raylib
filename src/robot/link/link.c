@@ -11,14 +11,14 @@
 #include <math.h>
 
 
-Link* LINK_Create(Vector3 dimensions, Color color, LinkType type, Actuator actuator)
+Link LINK_Create(Vector3 dimensions, Color color, LinkType type, Actuator actuator)
 {
     if (Vector3Length(dimensions) <= 0.001f) {
         RAISE(ValueError);
         return NULL;
     }
 
-    Link* self = NULL;
+    Link self = NULL;
     NEW0(self);
 
     self->color = color;
@@ -64,7 +64,7 @@ Link* LINK_Create(Vector3 dimensions, Color color, LinkType type, Actuator actua
 }
 
 
-float LINK_UpdateActuator(Link* self, float command)
+float LINK_UpdateActuator(Link self, float command)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -78,7 +78,7 @@ float LINK_UpdateActuator(Link* self, float command)
     return Actuator_update(self->actuator, command);
 }
 
-void LINK_IntegrateJointPosition(Link* self, float joint_velocity, float dt)
+void LINK_IntegrateJointPosition(Link self, float joint_velocity, float dt)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -106,7 +106,7 @@ void LINK_IntegrateJointPosition(Link* self, float joint_velocity, float dt)
     }
 }
 
-void LINK_SetJointPosition(Link* self, float joint_position)
+void LINK_SetJointPosition(Link self, float joint_position)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -116,7 +116,7 @@ void LINK_SetJointPosition(Link* self, float joint_position)
     self->joint_position = joint_position;
 }
 
-float LINK_GetJointPosition(const Link* self)
+float LINK_GetJointPosition(const Link self)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -126,7 +126,7 @@ float LINK_GetJointPosition(const Link* self)
     return self->joint_position;
 }
 
-void LINK_SetStart(Link* self, Vector3 start_world)
+void LINK_SetStart(Link self, Vector3 start_world)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -136,7 +136,7 @@ void LINK_SetStart(Link* self, Vector3 start_world)
     self->start_world = start_world;
 }
 
-void LINK_SetEnd(Link* self, Vector3 end_world)
+void LINK_SetEnd(Link self, Vector3 end_world)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -146,7 +146,7 @@ void LINK_SetEnd(Link* self, Vector3 end_world)
     self->end_world = end_world;
 }
 
-void LINK_SetHeadingWorld(Link* self, float heading_world_rad)
+void LINK_SetHeadingWorld(Link self, float heading_world_rad)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -156,7 +156,7 @@ void LINK_SetHeadingWorld(Link* self, float heading_world_rad)
     self->heading_world_rad = heading_world_rad;
 }
 
-Vector3 LINK_GetStart(const Link* self)
+Vector3 LINK_GetStart(const Link self)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -166,7 +166,7 @@ Vector3 LINK_GetStart(const Link* self)
     return self->start_world;
 }
 
-Vector3 LINK_GetEnd(const Link* self)
+Vector3 LINK_GetEnd(const Link self)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -176,7 +176,7 @@ Vector3 LINK_GetEnd(const Link* self)
     return self->end_world;
 }
 
-float LINK_GetHeadingWorld(const Link* self)
+float LINK_GetHeadingWorld(const Link self)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -186,7 +186,7 @@ float LINK_GetHeadingWorld(const Link* self)
     return self->heading_world_rad;
 }
 
-Vector3 LINK_GetDimensions(const Link* self){
+Vector3 LINK_GetDimensions(const Link self){
     if (!self) {
         RAISE(NullptrError);
         return Vector3Zero();
@@ -196,7 +196,7 @@ Vector3 LINK_GetDimensions(const Link* self){
 
 }
 
-Vector3 LINK_Draw(Link* self)
+Vector3 LINK_Draw(Link self)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -211,7 +211,7 @@ Vector3 LINK_Draw(Link* self)
     return self->draw(self);
 }
 
-void LINK_SetRenderMode(Link* self, LinkRenderMode mode)
+void LINK_SetRenderMode(Link self, LinkRenderMode mode)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -221,7 +221,7 @@ void LINK_SetRenderMode(Link* self, LinkRenderMode mode)
     self->render_mode = mode;
 }
 
-void LINK_SetTexture(Link* self, Texture2D texture)
+void LINK_SetTexture(Link self, Texture2D texture)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -232,7 +232,7 @@ void LINK_SetTexture(Link* self, Texture2D texture)
     self->has_texture = texture.id != 0;
 }
 
-void LINK_Destroy(Link* self)
+void LINK_Destroy(Link self)
 {
     if (!self) {
         return;

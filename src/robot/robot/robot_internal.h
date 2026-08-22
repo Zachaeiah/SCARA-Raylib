@@ -10,7 +10,7 @@ typedef enum RobotMode {
 } RobotMode;
 
 struct Robot {
-    Link* links[ROBOT_NUM_LINKS];
+    Link links[ROBOT_NUM_LINKS];
     Controller* controllers[ROBOT_NUM_CTRLS];
 
     RobotMode mode;

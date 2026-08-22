@@ -75,7 +75,7 @@ typedef struct RobotState {
  * @return Robot* A pointer to the newly created Robot instance, or NULL if creation failed due to invalid parameters.
  */
 extern Robot* ROBOT_Create(Controller* controllers[ROBOT_NUM_CTRLS],
-                    Link* links[ROBOT_NUM_LINKS]);
+                    Link links[ROBOT_NUM_LINKS]);
 
 
 /**

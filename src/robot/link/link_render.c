@@ -103,7 +103,7 @@ static void DrawCubeTexture(
  * @param self 
  * @param local_center 
  */
-static void LINK_DrawCubeBody(Link* self, Vector3 local_center)
+static void LINK_DrawCubeBody(Link self, Vector3 local_center)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -133,7 +133,7 @@ static void LINK_DrawCubeBody(Link* self, Vector3 local_center)
     }
 }
 
-Vector3 LINK_RenderRevolute(Link* self)
+Vector3 LINK_RenderRevolute(Link self)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -191,7 +191,7 @@ Vector3 LINK_RenderRevolute(Link* self)
     return self->end_world;
 }
 
-Vector3 LINK_RenderPrismatic(Link* self)
+Vector3 LINK_RenderPrismatic(Link self)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -274,7 +274,7 @@ Vector3 LINK_RenderPrismatic(Link* self)
     return self->end_world;
 }
 
-Vector3 LINK_RenderBase(Link* self)
+Vector3 LINK_RenderBase(Link self)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -302,7 +302,7 @@ Vector3 LINK_RenderBase(Link* self)
     return self->end_world;
 }
 
-Vector3 LINK_RenderTCP(Link* self)
+Vector3 LINK_RenderTCP(Link self)
 {
     if (!self) {
         RAISE(NullptrError);
