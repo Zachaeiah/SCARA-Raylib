@@ -14,7 +14,7 @@ struct Link {
     float heading_world_rad;
 
     LinkType type;
-    Actuator* actuator;
+    Actuator actuator;
 
     LinkRenderMode render_mode;
     Texture2D texture;

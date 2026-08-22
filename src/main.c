@@ -95,9 +95,9 @@ ZFilter motor_plant2 = NULL;
 ZFilter motor_plant3 = NULL;
 
 // actuator to control the plands
-Actuator* actuator1 = NULL;
-Actuator* actuator2 = NULL;
-Actuator* actuator3 = NULL;
+Actuator actuator1 = NULL;
+Actuator actuator2 = NULL;
+Actuator actuator3 = NULL;
 
 Link* link1 = NULL;
 Link* link2 = NULL;

@@ -1,6 +1,10 @@
 #ifndef CONTROL_ACTUATOR_H_
 #define CONTROL_ACTUATOR_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include "Control/Ztransform/Ztransform.h"
 #include "utils/Exceptions_Assertions/assert.h"
@@ -14,7 +18,8 @@ extern const ErrorType Actuator_Failed_ErrorCode; /**< Represents Actuator failu
 /**
  * @brief The Actuator structure, which applies a ZFilter to the input and includes dead zone and saturation limits.
  */
-typedef struct Actuator Actuator;
+#define AT Actuator
+typedef struct AT *AT;
 
 /**
  * @brief Constructs a new Actuator object with the given filter coefficients and limits.
@@ -24,7 +29,7 @@ typedef struct Actuator Actuator;
  * @param Saturation the saturation limit
  * @return Actuator* 
  */
-extern Actuator* Actuator_ctor(ZFilter filter,
+extern AT Actuator_ctor(ZFilter filter,
                         float dead_zone, float saturation);
 
 /**
@@ -34,13 +39,13 @@ extern Actuator* Actuator_ctor(ZFilter filter,
  * @param x_in input value to update the actuator with
  * @return the output value after applying the ZFilter, dead zone, and saturation
  */
-extern float Actuator_update(Actuator* self, float x_in);
+extern float Actuator_update(AT self, float x_in);
 
 /**
  * @brief Resets the actuator to its initial state
  * @param self pointer to the actuator instance
  */
-extern void Actuator_reset(Actuator* self);
+extern void Actuator_reset(AT self);
 
 
 /**
@@ -48,7 +53,13 @@ extern void Actuator_reset(Actuator* self);
  * 
  * @param self pointer to the actuator instance
  */
-extern void Actuator_dtor(Actuator* self);
+extern void Actuator_dtor(AT self);
+
+#undef AT
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 
 #endif

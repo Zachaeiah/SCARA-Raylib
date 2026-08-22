@@ -41,7 +41,7 @@ typedef struct Link Link;
  * @param actuator the actuator for the link
  * @return Link* pointer to the constructed link instance
  */
-Link* LINK_Create(Vector3 dimensions, Color color, LinkType type, Actuator* actuator);
+Link* LINK_Create(Vector3 dimensions, Color color, LinkType type, Actuator actuator);
 
 /**
  * @brief will update the link with a new angle input and return the speed output from the actuator

@@ -36,7 +36,7 @@ typedef struct Actuator{
     ZFilter filter;
     float Dead_Zone;
     float Saturation;
-} Actuator;
+};
 
 /**
  * @brief Constructs a new Actuator object with the given filter coefficients and limits.
@@ -46,10 +46,10 @@ typedef struct Actuator{
  * @param Saturation the saturation limit
  * @return Actuator* 
  */
-extern Actuator* Actuator_ctor(ZFilter filter, 
+Actuator Actuator_ctor(ZFilter filter, 
                         float Dead_Zone, float Saturation)
 {
-    Actuator* actuator = NULL;
+    Actuator actuator;
 
     
     TRY{
@@ -91,7 +91,7 @@ extern Actuator* Actuator_ctor(ZFilter filter,
  * @param x input value to update the actuator with
  * @return the output value after applying the ZFilter, dead zone, and saturation
  */
-float Actuator_update(Actuator* self, float x_in){
+float Actuator_update(Actuator self, float x_in){
 
     if (!self) return 0.0;
 
@@ -116,7 +116,7 @@ float Actuator_update(Actuator* self, float x_in){
  * @param self pointer to the actuator instance
  */
 
-void Actuator_reset(Actuator* self){
+void Actuator_reset(Actuator self){
     if (!self) return;
 
     ZFilter_reset(self->filter);
@@ -128,7 +128,7 @@ void Actuator_reset(Actuator* self){
  * 
  * @param self pointer to the actuator instance
  */
-void Actuator_dtor(Actuator* self){
+void Actuator_dtor(Actuator self){
     if (!self) return;
     LOG_DEBUG_MSG(NO_ERROR, "freeing Actuator at pointer: %p", (void*)self);
 

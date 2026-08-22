@@ -11,7 +11,7 @@
 #include <math.h>
 
 
-Link* LINK_Create(Vector3 dimensions, Color color, LinkType type, Actuator* actuator)
+Link* LINK_Create(Vector3 dimensions, Color color, LinkType type, Actuator actuator)
 {
     if (Vector3Length(dimensions) <= 0.001f) {
         RAISE(ValueError);
