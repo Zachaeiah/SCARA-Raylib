@@ -33,7 +33,7 @@ static float clampf(float value, float min, float max)
  * 
  */
 typedef struct Actuator{
-    ZFilter* filter;
+    ZFilter filter;
     float Dead_Zone;
     float Saturation;
 } Actuator;
@@ -46,7 +46,7 @@ typedef struct Actuator{
  * @param Saturation the saturation limit
  * @return Actuator* 
  */
-extern Actuator* Actuator_ctor(ZFilter* filter, 
+extern Actuator* Actuator_ctor(ZFilter filter, 
                         float Dead_Zone, float Saturation)
 {
     Actuator* actuator = NULL;

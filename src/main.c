@@ -90,9 +90,9 @@ static const float POSITION_CONTROLLER_NUM[3] = { 1.82285934f, -1.87878799f, 0.4
 static const float POSITION_CONTROLLER_DEN[3] = { 1.00000000f, -1.04377111f, 0.27236453f };
 
 // motor plands
-ZFilter* motor_plant1 = NULL;
-ZFilter* motor_plant2 = NULL;
-ZFilter* motor_plant3 = NULL;
+ZFilter motor_plant1 = NULL;
+ZFilter motor_plant2 = NULL;
+ZFilter motor_plant3 = NULL;
 
 // actuator to control the plands
 Actuator* actuator1 = NULL;
@@ -540,7 +540,7 @@ void UpdateDrawFrame(void)
         phase -= 2.0f * PI;
 
 
-    XYPlot* plot = XYPlot_Create(
+    XYPlot plot = XYPlot_Create(
         (Vector2){ 1550, 300 },
         400,
         250

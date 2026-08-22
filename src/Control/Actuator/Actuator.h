@@ -24,7 +24,7 @@ typedef struct Actuator Actuator;
  * @param Saturation the saturation limit
  * @return Actuator* 
  */
-extern Actuator* Actuator_ctor(ZFilter* filter,
+extern Actuator* Actuator_ctor(ZFilter filter,
                         float dead_zone, float saturation);
 
 /**

@@ -15,7 +15,7 @@
  */
 struct PIDController {
     Controller base;
-    ZFilter* PID_filter;
+    ZFilter PID_filter;
 };
 
 /**

@@ -18,7 +18,8 @@ extern const ErrorType XYPLOT_Failed_ErrorCode;
  * @brief Represents a 2D XY plot with specified bounds and ranges for the x and y axes.
  * 
  */
-typedef struct XYPlot XYPlot;
+#define P XYPlot
+typedef struct P *P;
 
 /**
  * @brief Creates and initializes an XY plot.
@@ -29,7 +30,7 @@ typedef struct XYPlot XYPlot;
  *
  * @return Pointer to the created plot, or NULL on failure.
  */
-XYPlot* XYPlot_Create(Vector2 pos, float width, float height);
+P XYPlot_Create(Vector2 pos, float width, float height);
 
 
 /**
@@ -37,7 +38,7 @@ XYPlot* XYPlot_Create(Vector2 pos, float width, float height);
  *
  * @param plot Plot to destroy.
  */
-void XYPlot_Destroy(XYPlot* plot);
+void XYPlot_Destroy(P plot);
 
 /**
  * @brief Sets the grid spacing for the x and y axes of the XY plot.
@@ -47,7 +48,7 @@ void XYPlot_Destroy(XYPlot* plot);
  * @param yMajor The major division spacing for the y-axis.
  * @param minorDivisions The number of minor divisions between major divisions.
  */
-void XYPlot_SetGrid( XYPlot* plot, float xMajor, float yMajor, int minorDivisions);
+void XYPlot_SetGrid(P plot, float xMajor, float yMajor, int minorDivisions);
 
 /**
  * @brief Draw a point of interest on the plot
@@ -58,7 +59,7 @@ void XYPlot_SetGrid( XYPlot* plot, float xMajor, float yMajor, int minorDivision
  * @param label Optional label, NULL for no label
  * @param color Point color
  */
-void XYPlot_DrawPoint( const XYPlot* plot, float x, float y, const char* label, Color color);
+void XYPlot_DrawPoint(const P plot, float x, float y, const char* label, Color color);
 
 /**
  * @brief Sets the labels for the x and y axes of the XY plot.
@@ -69,7 +70,7 @@ void XYPlot_DrawPoint( const XYPlot* plot, float x, float y, const char* label, 
  * 
  */
 
-void XYPlot_SetLabels( XYPlot* plot, const char* xLabel, const char* yLabel);
+void XYPlot_SetLabels(P plot, const char* xLabel, const char* yLabel);
 
 
 /**
@@ -81,7 +82,7 @@ void XYPlot_SetLabels( XYPlot* plot, const char* xLabel, const char* yLabel);
  * @param yMin Minimum value for the y-axis.
  * @param yMax Maximum value for the y-axis.
  */
-void XYPlot_SetRange( XYPlot* plot, float xMin, float xMax, float yMin, float yMax);
+void XYPlot_SetRange(P plot, float xMin, float xMax, float yMin, float yMax);
 
 /**
  * @brief Automatically adjusts the range of the XY plot based on the provided x and y data points.
@@ -91,7 +92,7 @@ void XYPlot_SetRange( XYPlot* plot, float xMin, float xMax, float yMin, float yM
  * @param y Array of y values.
  * @param count Number of data points.
  */
-void XYPlot_AutoRange( XYPlot* plot, const float* x, const float* y, size_t count);
+void XYPlot_AutoRange(P plot, const float* x, const float* y, size_t count);
 
 /**
  * @brief Draws the XY plot with the specified data points.
@@ -102,7 +103,9 @@ void XYPlot_AutoRange( XYPlot* plot, const float* x, const float* y, size_t coun
  * @param count Number of data points.
  * @param color Color of the plot.
  */
-void XYPlot_Draw( const XYPlot* plot, const float* x, const float* y, size_t count, Color color);
+void XYPlot_Draw(const P plot, const float* x, const float* y, size_t count, Color color);
+
+#undef P
 
 #ifdef __cplusplus
 }

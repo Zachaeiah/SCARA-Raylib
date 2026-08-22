@@ -27,7 +27,7 @@ typedef struct XYPlot {
     const char* xLabel;
     const char* yLabel;
 
-} XYPlot;
+};
 
 /**
  * @brief Maps a value from the data range to the pixel range for the x-axis.
@@ -36,7 +36,7 @@ typedef struct XYPlot {
  * @param x The x-value to map.
  * @return float The mapped x-value in pixel coordinates.
  */
-static float MapX(const XYPlot* plot, float x)
+static float MapX(const XYPlot plot, float x)
 {
     return plot->pos.x +
         ((x - plot->xMin) / (plot->xMax - plot->xMin)) *
@@ -50,7 +50,7 @@ static float MapX(const XYPlot* plot, float x)
  * @param y The y-value to map.
  * @return float The mapped y-value in pixel coordinates.
  */
-static float MapY(const XYPlot* plot, float y)
+static float MapY(const XYPlot plot, float y)
 {
     return plot->pos.y -
         ((y - plot->yMin) / (plot->yMax - plot->yMin)) *
@@ -62,7 +62,7 @@ static float MapY(const XYPlot* plot, float y)
  * 
  * @param plot Pointer to the XYPlot structure.
  */
-static void XYPlot_DrawGrid(const XYPlot* plot)
+static void XYPlot_DrawGrid(const XYPlot plot)
 {
     float xMinor = plot->xMajor / plot->minorDivisions;
     float yMinor = plot->yMajor / plot->minorDivisions;
@@ -169,7 +169,7 @@ static void XYPlot_DrawGrid(const XYPlot* plot)
     }
 }
 
-static void DrawLabels(const XYPlot* plot)
+static void DrawLabels(const XYPlot plot)
 {
     const int fontSize = 14;
 
@@ -216,21 +216,24 @@ static void DrawLabels(const XYPlot* plot)
     }
 }
 
-XYPlot* XYPlot_Create(
+XYPlot XYPlot_Create(
     Vector2 pos,
     float width,
     float height)
 {
-    XYPlot* plot = NULL;
+    XYPlot plot = NULL;
 
-    if (!pos.x || !pos.y || width <= 0.0f || height <= 0.0f) {
+    if (width <= 0.0f || height <= 0.0f)
+    {
         RAISE(XYPLOT_Failed);
-        LOG_ERROR_MSG(XYPLOT_Failed_ErrorCode, "Invalid parameters for XYPlot_Create. Position: (%.2f, %.2f), Width: %.2f, Height: %.2f\n",
-            pos.x,
-            pos.y,
+
+        LOG_ERROR_MSG(
+            XYPLOT_Failed_ErrorCode,
+            "Invalid XYPlot size. Width: %.2f, Height: %.2f\n",
             width,
             height
         );
+
         return NULL;
     }
 
@@ -258,13 +261,13 @@ XYPlot* XYPlot_Create(
     return plot;
 }
 
-void XYPlot_Destroy(XYPlot* plot)
+void XYPlot_Destroy(XYPlot plot)
 {
-    free(plot);
+    FREE(plot);
 }
 
 void XYPlot_SetGrid(
-    XYPlot* plot,
+    XYPlot plot,
     float xMajor,
     float yMajor,
     int minorDivisions)
@@ -275,7 +278,7 @@ void XYPlot_SetGrid(
 }
 
 void XYPlot_SetLabels(
-    XYPlot* plot,
+    XYPlot plot,
     const char* xLabel,
     const char* yLabel)
 {
@@ -285,7 +288,7 @@ void XYPlot_SetLabels(
 
 
 void XYPlot_SetRange(
-    XYPlot* plot,
+    XYPlot plot,
     float xMin,
     float xMax,
     float yMin,
@@ -298,7 +301,7 @@ void XYPlot_SetRange(
     plot->yMax = yMax;
 }
 
-void XYPlot_DrawPoint(const XYPlot* plot, float x, float y, const char* label,  Color color)
+void XYPlot_DrawPoint(const XYPlot plot, float x, float y, const char* label,  Color color)
 {
     Vector2 point =
     {
@@ -335,7 +338,7 @@ void XYPlot_DrawPoint(const XYPlot* plot, float x, float y, const char* label,  
 }
 
 
-void XYPlot_AutoRange( XYPlot* plot, const float* x,
+void XYPlot_AutoRange(XYPlot plot, const float* x,
     const float* y,
     size_t count)
 {
@@ -390,7 +393,7 @@ void XYPlot_AutoRange( XYPlot* plot, const float* x,
 
 
 void XYPlot_Draw(
-    const XYPlot* plot,
+    const XYPlot plot,
     const float* x,
     const float* y,
     size_t count,

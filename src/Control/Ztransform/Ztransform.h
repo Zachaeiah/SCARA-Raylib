@@ -14,7 +14,8 @@ extern "C" {
 extern const Except_t Zfilter_Failed;
 extern const ErrorType Zfilter_Failed_ErrorCode; /**< Represents Z-Filter failure error code. */
 
-typedef struct ZFilter ZFilter;   // Opaque struct for ZFilter implementation
+#define ZF ZFilter
+typedef struct ZF *ZF;   // Opaque struct for ZFilter implementation
 
 /**
  * @brief Create a discrete Z-domain filter.
@@ -34,7 +35,7 @@ typedef struct ZFilter ZFilter;   // Opaque struct for ZFilter implementation
  *
  * @return Pointer to created filter
  */
-extern ZFilter* ZFilter_ctor(
+extern ZF ZFilter_ctor(
     const float *b_in, uint32_t nb,
     const float *a_in, uint32_t na
 );
@@ -50,14 +51,14 @@ extern ZFilter* ZFilter_ctor(
  *
  * @return Output sample
  */
-extern float ZFilter_update(ZFilter *f, float x);
+extern float ZFilter_update(ZF f, float x);
 
 /**
  * @brief Reset filter history (internal state) to zero; filter coefficients remain unchanged.
  *
  * @throw NullptrError if f is NULL
  */
-extern void ZFilter_reset(ZFilter *f);
+extern void ZFilter_reset(ZF f);
 
 /**
  * @brief Destroy filter and release all internal resources.
@@ -65,8 +66,9 @@ extern void ZFilter_reset(ZFilter *f);
  * Frees all internal resources, including coefficient arrays and history.
  * Safe to call with NULL.
  */
-extern void ZFilter_dtor(ZFilter *f);
+extern void ZFilter_dtor(ZF f);
 
+#undef ZF
 
 #ifdef __cplusplus
 }

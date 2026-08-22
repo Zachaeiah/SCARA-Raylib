@@ -19,10 +19,10 @@ struct ZFilter {
     float *y_hist; // output history
 };
 
-ZFilter* ZFilter_ctor(const float *b_in, uint32_t nb,
+ZFilter ZFilter_ctor(const float *b_in, uint32_t nb,
                       const float *a_in, uint32_t na)
 {
-    ZFilter *filter = NULL;
+    ZFilter filter = NULL;
     float a0 = a_in[0];
 
     if (!b_in || !a_in)
@@ -68,7 +68,7 @@ ZFilter* ZFilter_ctor(const float *b_in, uint32_t nb,
     return filter;
 }
 
-float ZFilter_update(ZFilter *f, float x)
+float ZFilter_update(ZFilter f, float x)
 {
     if (!f)
         RAISE(NullptrError);
@@ -110,7 +110,7 @@ float ZFilter_update(ZFilter *f, float x)
     return y;
 }
 
-void ZFilter_reset(ZFilter *f)
+void ZFilter_reset(ZFilter f)
 {
     if (!f)
         RAISE(NullptrError);
@@ -125,7 +125,7 @@ void ZFilter_reset(ZFilter *f)
     }
 }
 
-void ZFilter_dtor(ZFilter *f)
+void ZFilter_dtor(ZFilter f)
 {
     if (!f)
         RAISE(NullptrError);
