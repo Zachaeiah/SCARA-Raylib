@@ -26,7 +26,7 @@ struct PIDController {
  */
 static void PIDController_ctor(Controller self, va_list* args)
 {
-    PIDController* pid = (PIDController*)self;
+    PIDController pid = (PIDController)self;
 
     const float* b = va_arg(*args, const float*);
     uint32_t nb = va_arg(*args, uint32_t);
@@ -52,7 +52,7 @@ static void PIDController_ctor(Controller self, va_list* args)
  */
 static float PIDController_update(Controller self, float x)
 {
-    PIDController* pid = (PIDController*)self;
+    PIDController pid = (PIDController)self;
 
     if (!pid->PID_filter) {
         RAISE(NullptrError);
@@ -68,7 +68,7 @@ static float PIDController_update(Controller self, float x)
  */
 static void PIDController_reset(Controller self)
 {
-    PIDController* pid = (PIDController*)self;
+    PIDController pid = (PIDController)self;
 
     if (!pid->PID_filter) {
         RAISE(NullptrError);
@@ -84,7 +84,7 @@ static void PIDController_reset(Controller self)
  */
 static void PIDController_dtor(Controller self)
 {
-    PIDController* pid = (PIDController*)self;
+    PIDController pid = (PIDController)self;
 
     /*
         Do not FREE(pid) here.
