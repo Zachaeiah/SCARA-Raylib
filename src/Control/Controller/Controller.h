@@ -1,6 +1,10 @@
 #ifndef CONTROLLER_H_
 #define CONTROLLER_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "utils/Exceptions_Assertions/assert.h"
 #include "utils/Exceptions_Assertions/except.h"
 #include "utils/Logger/logger.h"
@@ -8,7 +12,8 @@
 extern const Except_t Controller_failed; /**< Represents a generic controller error. */
 extern const ErrorType Controller_ErrorCode; /**< Represents a generic controller error code. */
 
-typedef struct Controller Controller;
+#define C Controller
+typedef struct C *C;
 typedef struct ControllerType ControllerType;
 
 /**
@@ -26,7 +31,7 @@ typedef struct ControllerType ControllerType;
  * @throw NotImplementedError if required functions are missing
  * @throw MemroyError        if allocation fails
  */
-Controller* Controller_create(const ControllerType* type, ...);
+C Controller_create(const ControllerType* type, ...);
 
 /**
  * @brief Update the controller.
@@ -34,20 +39,26 @@ Controller* Controller_create(const ControllerType* type, ...);
  * @throw NullptrError if self is NULL
  * @throw NotImplementedError if update is not implemented
  */
-float Controller_update(Controller* self, float x);
+float Controller_update(C self, float x);
 
 /**
  * @brief Reset the controller.
  *
  * @throw NullptrError if self is NULL
  */
-void Controller_reset(Controller* self);
+void Controller_reset(C self);
 
 /**
  * @brief Destroy the controller.
  *
  * Safe to call with NULL.
  */
-void Controller_destroy(Controller* self);
+void Controller_destroy(Controller self);
+
+#undef C
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #endif

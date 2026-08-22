@@ -7,9 +7,9 @@
 
 const Except_t Controller_failed = {"Controller error"};
 
-Controller* Controller_create(const ControllerType* type, ...)
+Controller Controller_create(const ControllerType* type, ...)
 {
-    Controller* self = NULL;
+    Controller self = NULL;
 
     if (!type) {
         RAISE(NullptrError);
@@ -56,7 +56,7 @@ Controller* Controller_create(const ControllerType* type, ...)
     return self;
 }
 
-float Controller_update(Controller* self, float x)
+float Controller_update(Controller self, float x)
 {
     if (!self) RAISE(NullptrError);
 
@@ -65,7 +65,7 @@ float Controller_update(Controller* self, float x)
     return self->type->vtable->update(self, x);
 }
 
-void Controller_reset(Controller* self)
+void Controller_reset(Controller self)
 {
     if (!self) RAISE(NullptrError);
 
@@ -74,7 +74,7 @@ void Controller_reset(Controller* self)
     self->type->vtable->reset(self);
 }
 
-void Controller_destroy(Controller* self)
+void Controller_destroy(Controller self)
 {
     if (!self) RAISE(NullptrError);
 

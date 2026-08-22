@@ -24,7 +24,7 @@ struct PIDController {
  * @param self A pointer to the Controller structure.
  * @param args A pointer to the variable arguments list.
  */
-static void PIDController_ctor(Controller* self, va_list* args)
+static void PIDController_ctor(Controller self, va_list* args)
 {
     PIDController* pid = (PIDController*)self;
 
@@ -50,7 +50,7 @@ static void PIDController_ctor(Controller* self, va_list* args)
  * @param x The new input value.
  * @return The updated output value.
  */
-static float PIDController_update(Controller* self, float x)
+static float PIDController_update(Controller self, float x)
 {
     PIDController* pid = (PIDController*)self;
 
@@ -66,7 +66,7 @@ static float PIDController_update(Controller* self, float x)
  * 
  * @param self A pointer to the Controller structure.
  */
-static void PIDController_reset(Controller* self)
+static void PIDController_reset(Controller self)
 {
     PIDController* pid = (PIDController*)self;
 
@@ -82,7 +82,7 @@ static void PIDController_reset(Controller* self)
  * 
  * @param self A pointer to the Controller structure.
  */
-static void PIDController_dtor(Controller* self)
+static void PIDController_dtor(Controller self)
 {
     PIDController* pid = (PIDController*)self;
 

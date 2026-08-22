@@ -11,7 +11,7 @@ typedef enum RobotMode {
 
 struct Robot {
     Link links[ROBOT_NUM_LINKS];
-    Controller* controllers[ROBOT_NUM_CTRLS];
+    Controller controllers[ROBOT_NUM_CTRLS];
 
     RobotMode mode;
     RobotMode previous_mode;

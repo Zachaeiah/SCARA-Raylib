@@ -143,7 +143,7 @@ static bool ROBOT_IsValidLimitPair(float min_limit, float max_limit)
  * @param links an array of pointers to the links in the robot
  * @return Robot pointer to the constructed Robot instance
  */
-Robot ROBOT_Create(Controller* controllers[ROBOT_NUM_CTRLS],
+Robot ROBOT_Create(Controller controllers[ROBOT_NUM_CTRLS],
                     Link links[ROBOT_NUM_LINKS])
 {
     if (!controllers || !links) {

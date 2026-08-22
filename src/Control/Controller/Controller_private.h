@@ -15,10 +15,10 @@
  * @param dtor A pointer to the destructor function for the controller, 
  */
 typedef struct ControllerVTable {
-    void  (*ctor)(Controller* self, va_list* args);
-    float (*update)(Controller* self, float x);
-    void  (*reset)(Controller* self);
-    void  (*dtor)(Controller* self);
+    void  (*ctor)(Controller self, va_list* args);
+    float (*update)(Controller self, float x);
+    void  (*reset)(Controller self);
+    void  (*dtor)(Controller self);
 } ControllerVTable;
 
 /**

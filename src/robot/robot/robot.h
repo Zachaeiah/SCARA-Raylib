@@ -75,7 +75,7 @@ typedef struct RobotState {
  * @param links An array of pointers to Link instances, one for each robot link.
  * @return Robot* A pointer to the newly created Robot instance, or NULL if creation failed due to invalid parameters.
  */
-extern R ROBOT_Create(Controller* controllers[ROBOT_NUM_CTRLS],
+extern R ROBOT_Create(Controller controllers[ROBOT_NUM_CTRLS],
                     Link links[ROBOT_NUM_LINKS]);
 
 

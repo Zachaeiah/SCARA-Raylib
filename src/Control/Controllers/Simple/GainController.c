@@ -19,7 +19,7 @@ typedef struct GainController {
  * @param self A pointer to the controller instance to construct.
  * @param args A pointer to the variable arguments list.
  */
-static void GainController_ctor(Controller* self, va_list* args)
+static void GainController_ctor(Controller self, va_list* args)
 {
     
     GainController* gain = (GainController*)self;
@@ -36,7 +36,7 @@ static void GainController_ctor(Controller* self, va_list* args)
  * @param x The input value.
  * @return float The output value.
  */
-static float GainController_update(Controller* self, float x)
+static float GainController_update(Controller self, float x)
 {
     GainController* gain = (GainController*)self;
 
@@ -53,7 +53,7 @@ static float GainController_update(Controller* self, float x)
  * 
  * @param self A pointer to the controller instance to reset.
  */
-static void GainController_reset(Controller* self)
+static void GainController_reset(Controller self)
 {
     LOG_INFO_MSG(NO_ERROR, "Resting Gain controller");
     (void)self;
@@ -65,7 +65,7 @@ static void GainController_reset(Controller* self)
  * 
  * @param self A pointer to the controller instance to destroy.
  */
-static void GainController_dtor(Controller* self)
+static void GainController_dtor(Controller self)
 {
     GainController* gain = (GainController*)self;
     LOG_DEBUG_MSG(NO_ERROR, "Destroying Gain Controller with gain: %f", gain->k);

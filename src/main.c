@@ -62,14 +62,14 @@ static Camera camera = { 0 };
 static Robot SCARA;
 
 // actuator velocity controller
-Controller* PID1_vel = NULL;
-Controller* PID2_vel = NULL;
-Controller* PID3_vel = NULL;
+Controller PID1_vel = NULL;
+Controller PID2_vel = NULL;
+Controller PID3_vel = NULL;
 
 // actuator posions controller
-Controller* PID1_pos = NULL;
-Controller* PID2_pos = NULL;
-Controller* PID3_pos = NULL;
+Controller PID1_pos = NULL;
+Controller PID2_pos = NULL;
+Controller PID3_pos = NULL;
 
 // ===== VELOCITY controller =====
 #define VELOCITY_CONTROLLER_NUM_LEN 4
@@ -181,7 +181,7 @@ int main(void)
     PID2_pos = Controller_create(&PIDController_Type, POSITION_CONTROLLER_NUM, POSITION_CONTROLLER_NUM_LEN, POSITION_CONTROLLER_DEN, POSITION_CONTROLLER_DEN_LEN);
     PID3_pos = Controller_create(&PIDController_Type, POSITION_CONTROLLER_NUM, POSITION_CONTROLLER_NUM_LEN, POSITION_CONTROLLER_DEN, POSITION_CONTROLLER_DEN_LEN);
 
-    Controller* controllers[] = {PID1_pos, PID2_pos, PID3_pos, PID1_vel, PID2_vel, PID3_vel,};
+    Controller controllers[] = {PID1_pos, PID2_pos, PID3_pos, PID1_vel, PID2_vel, PID3_vel,};
     Link links[ROBOT_NUM_LINKS] = {link1, link2, link3, link4};
     
     // setup scara robot with simple setup for testing
