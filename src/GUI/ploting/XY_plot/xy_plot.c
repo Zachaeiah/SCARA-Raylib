@@ -1,6 +1,34 @@
 #include "xy_plot.h"
 #include <math.h>
 
+const Except_t XYPLOT_Failed = {"XYPlot failed"};
+
+/**
+ * @brief Represents a 2D XY plot with specified bounds and ranges for the x and y axes.
+ * 
+ */
+typedef struct XYPlot {
+    Vector2 pos;     // Bottom-left corner of graph
+
+    float width;
+    float height;
+
+    float xMin;
+    float xMax;
+
+    float yMin;
+    float yMax;
+
+    float xMajor;
+    float yMajor;
+
+    int minorDivisions;
+
+    const char* xLabel;
+    const char* yLabel;
+
+} XYPlot;
+
 /**
  * @brief Maps a value from the data range to the pixel range for the x-axis.
  * 
@@ -188,12 +216,26 @@ static void DrawLabels(const XYPlot* plot)
     }
 }
 
-void XYPlot_Init(
-    XYPlot* plot,
+XYPlot* XYPlot_Create(
     Vector2 pos,
     float width,
     float height)
 {
+    XYPlot* plot = NULL;
+
+    if (!pos.x || !pos.y || width <= 0.0f || height <= 0.0f) {
+        RAISE(XYPLOT_Failed);
+        LOG_ERROR_MSG(XYPLOT_Failed_ErrorCode, "Invalid parameters for XYPlot_Create. Position: (%.2f, %.2f), Width: %.2f, Height: %.2f\n",
+            pos.x,
+            pos.y,
+            width,
+            height
+        );
+        return NULL;
+    }
+
+    NEW0(plot);
+
     plot->pos = pos;
 
     plot->width = width;
@@ -212,6 +254,13 @@ void XYPlot_Init(
 
     plot->xLabel = NULL;
     plot->yLabel = NULL;
+
+    return plot;
+}
+
+void XYPlot_Destroy(XYPlot* plot)
+{
+    free(plot);
 }
 
 void XYPlot_SetGrid(
@@ -249,10 +298,44 @@ void XYPlot_SetRange(
     plot->yMax = yMax;
 }
 
+void XYPlot_DrawPoint(const XYPlot* plot, float x, float y, const char* label,  Color color)
+{
+    Vector2 point =
+    {
+        MapX(plot, x),
+        MapY(plot, y)
+    };
 
-void XYPlot_AutoRange(
-    XYPlot* plot,
-    const float* x,
+    // Draw point
+    DrawCircleV(
+        point,
+        5.0f,
+        color
+    );
+
+    // Draw outline
+    DrawCircleLines(
+        (int)point.x,
+        (int)point.y,
+        5.0f,
+        DARKGRAY
+    );
+
+    // Draw optional label
+    if (label != NULL)
+    {
+        DrawText(
+            label,
+            (int)point.x + 8,
+            (int)point.y - 14,
+            12,
+            color
+        );
+    }
+}
+
+
+void XYPlot_AutoRange( XYPlot* plot, const float* x,
     const float* y,
     size_t count)
 {

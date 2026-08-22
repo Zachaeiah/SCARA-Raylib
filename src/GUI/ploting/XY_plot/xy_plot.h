@@ -7,43 +7,37 @@ extern "C" {
 
 #include "raylib.h"
 #include <stddef.h>
+#include "utils/Logger/logger.h"
+#include "utils/Exceptions_Assertions/assert.h"
+#include "utils/MemAllocator/mem.h"
+
+extern const Except_t XYPLOT_Failed;
+extern const ErrorType XYPLOT_Failed_ErrorCode;
 
 /**
  * @brief Represents a 2D XY plot with specified bounds and ranges for the x and y axes.
  * 
  */
-typedef struct XYPlot {
-    Vector2 pos;     // Bottom-left corner of graph
+typedef struct XYPlot XYPlot;
 
-    float width;
-    float height;
-
-    float xMin;
-    float xMax;
-
-    float yMin;
-    float yMax;
-
-    float xMajor;
-    float yMajor;
-
-    int minorDivisions;
-
-    const char* xLabel;
-    const char* yLabel;
-
-} XYPlot;
+/**
+ * @brief Creates and initializes an XY plot.
+ *
+ * @param pos Bottom-left corner of the plot.
+ * @param width Plot width.
+ * @param height Plot height.
+ *
+ * @return Pointer to the created plot, or NULL on failure.
+ */
+XYPlot* XYPlot_Create(Vector2 pos, float width, float height);
 
 
 /**
- * @brief Initializes an XYPlot structure with the specified bounds.
- * 
- * @param plot Pointer to the XYPlot structure to initialize.
- * @param pos The position of the bottom-left corner of the plot.
- * @param width The width of the plot area.
- * @param height The height of the plot area.
+ * @brief Destroys an XY plot.
+ *
+ * @param plot Plot to destroy.
  */
-void XYPlot_Init(XYPlot* plot, Vector2 pos, float width, float height);
+void XYPlot_Destroy(XYPlot* plot);
 
 /**
  * @brief Sets the grid spacing for the x and y axes of the XY plot.
@@ -54,6 +48,17 @@ void XYPlot_Init(XYPlot* plot, Vector2 pos, float width, float height);
  * @param minorDivisions The number of minor divisions between major divisions.
  */
 void XYPlot_SetGrid( XYPlot* plot, float xMajor, float yMajor, int minorDivisions);
+
+/**
+ * @brief Draw a point of interest on the plot
+ *
+ * @param plot  Plot to draw on
+ * @param x     X coordinate
+ * @param y     Y coordinate
+ * @param label Optional label, NULL for no label
+ * @param color Point color
+ */
+void XYPlot_DrawPoint( const XYPlot* plot, float x, float y, const char* label, Color color);
 
 /**
  * @brief Sets the labels for the x and y axes of the XY plot.

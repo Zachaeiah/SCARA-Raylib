@@ -44,7 +44,7 @@ static JointCommandCheck CheckJointPositionTarget(Robot* self, Vector3 requested
     }
 
     if (!IsFiniteVector3(requested_jp)) {
-        LOG_ERROR_MSG(
+        LOG_WARN_MSG(
             JP_CMD_REJECTED_ErrorCode,
             "Joint position target rejected. Non-finite target. JP: (%5.f, %.5f, %5.f)\n",
             requested_jp.x,

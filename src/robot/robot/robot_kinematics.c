@@ -271,7 +271,7 @@ IK_result ROBOT_inverse_kinematics(Robot* robot, Vector3 target_TCP)
         result.reachable[i] = jp_in_range(robot, jp);
 
         if (!result.reachable[i]) {
-            LOG_ERROR_MSG(TCP_CMD_REJECTED_ErrorCode, "IK solution %d is out of joint limits. Joint angles: J1: %.3f, J2: %.3f, J3: %.3f\n",
+            LOG_WARN_MSG(TCP_CMD_REJECTED_ErrorCode, "IK solution %d is out of joint limits. Joint angles: J1: %.3f, J2: %.3f, J3: %.3f\n",
                 i,
                 jp.x,
                 jp.y,

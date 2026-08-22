@@ -31,9 +31,12 @@ const ErrorType TCP_CMD_REJECTED_ErrorCode = 5;
 
 const ErrorType Mem_Failed_ErrorCode = 6; /**< Represents memory allocation failure. */
 const ErrorType Mem_Free_Failed_ErrorCode = 7; /**< Represents memory free failure error code. */
+
 const ErrorType Zfilter_Failed_ErrorCode = 8; /**< Represents Z-Filter failure error code. */
 const ErrorType Controller_ErrorCode = 9; /**< Represents a generic controller error code. */
 const ErrorType Actuator_Failed_ErrorCode = 10; /**< Represents Actuator failure error code. */
+
+const ErrorType XYPLOT_Failed_ErrorCode  =10; /**< Represents XYPLOT Failed  failure error code. */
 
 // ---------------------------------------------------------
 // Timing
@@ -510,47 +513,67 @@ void DrawWorldAxes3D(float length)
 // Runs at 60 FPS
 // Put raylib drawing here.
 // ---------------------------------------------------------
+
+#define PLOT_POINTS 200
+
 void UpdateDrawFrame(void)
 {
+    static float phase = 0.0f;
 
-    float x[] = { 0.37f, 1.2f, 2.8f, 4.63f };
-    float y[] = { -1.4f, 0.3f, 2.2f, 3.7f };
+    float x[PLOT_POINTS];
+    float y[PLOT_POINTS];
 
-    size_t count = 5;
+    size_t count = PLOT_POINTS;
 
-    XYPlot plot;
+    // Generate sine wave
+    for (size_t i = 0; i < count; i++)
+    {
+        x[i] = ((float)i / (float)(count - 1)) * 2.0f * PI;
 
-    XYPlot_Init(
-        &plot,
-        (Vector2){ 1550, 300 },  // Bottom-left
-        400,                     // Width
-        250                      // Height
+        y[i] = sinf(x[i] + phase);
+    }
+
+    // Move phase from 0 -> 2PI
+    phase += 0.03f;
+
+    if (phase >= 2.0f * PI)
+        phase -= 2.0f * PI;
+
+
+    XYPlot* plot = XYPlot_Create(
+        (Vector2){ 1550, 300 },
+        400,
+        250
     );
 
     XYPlot_SetRange(
-        &plot,
-        0.0f, 10.0f,
-        -2.0f, 4.0f
+        plot,
+        0.0f,
+        2.0f * PI,
+        -1.5f,
+        1.5f
     );
 
     XYPlot_SetGrid(
-        &plot,
-        1.0f,
-        1.0f,
+        plot,
+        PI / 2.0f,
+        0.5f,
         5
     );
 
     XYPlot_SetLabels(
-        &plot,
-        "Time (s)",
-        "Position (deg)"
+        plot,
+        "Angle (rad)",
+        "Amplitude"
     );
 
-    // Update camera (simple orbital rotation around target)
+
+    // Update camera
     UpdateCamera(&camera, CAMERA_ORBITAL);
 
-    // Update GUI state with latest robot state
+    // Update GUI
     GUI_SIM_PANEL_Update(&gui_sim_panel, SCARA);
+
 
     BeginDrawing();
 
@@ -564,13 +587,22 @@ void UpdateDrawFrame(void)
 
         EndMode3D();
 
-        // Draw GUI on top of 3D view
+
+        // Draw GUI
         GUI_SIM_PANEL_Draw(&gui_sim_panel);
 
-        // Draw graph on top of GUI
-        XYPlot_Draw(&plot, x, y, count, RED);
+        XYPlot_DrawPoint(plot, 2.5f, 0.75f, "Target", BLUE);
 
 
+        // Draw moving sine wave
+        XYPlot_Draw(
+            plot,
+            x,
+            y,
+            count,
+            RED
+        );
 
     EndDrawing();
+
 }
