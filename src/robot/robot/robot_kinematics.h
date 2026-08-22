@@ -34,7 +34,7 @@ typedef struct JB_result{
  * @param target_JP the target joint angles as a Vector3 (in radians)
  * @return FK_result containing the position and reachability of the end effector
  */
-extern FK_result ROBOT_forward_kinematics(Robot* robot, Vector3 target_JP);
+extern FK_result ROBOT_forward_kinematics(Robot robot, Vector3 target_JP);
 
 /**
  * @brief Computes the inverse kinematics for the robot given a target position and orientation.
@@ -42,7 +42,7 @@ extern FK_result ROBOT_forward_kinematics(Robot* robot, Vector3 target_JP);
  * @param robot pointer to the Robot instance
  * @param target_TCP the target position as a Vector3
  */
-extern IK_result ROBOT_inverse_kinematics(Robot* robot, Vector3 target_TCP);
+extern IK_result ROBOT_inverse_kinematics(Robot robot, Vector3 target_TCP);
 
 /**
  * @brief 
@@ -50,7 +50,7 @@ extern IK_result ROBOT_inverse_kinematics(Robot* robot, Vector3 target_TCP);
  * @param robot 
  * @return JB_result 
  */
-extern JB_result ROBOT_jacobian_velcitys(Robot* robot, Vector3 target_TCP_vel);
+extern JB_result ROBOT_jacobian_velcitys(Robot robot, Vector3 target_TCP_vel);
 
 
 

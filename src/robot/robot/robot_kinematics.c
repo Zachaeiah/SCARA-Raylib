@@ -18,7 +18,7 @@ ErrorType JP_RANGE = 5; /**< Represents joint position out of range. */
  * @param value 
  * @return int 
  */
-static bool joint_pos_in_range(Robot* robot, int link_index, float value)
+static bool joint_pos_in_range(Robot robot, int link_index, float value)
 {
     bool in_range = value >= robot->joint_position_limits[link_index][ROBOT_LIMIT_MIN] &&
                     value <= robot->joint_position_limits[link_index][ROBOT_LIMIT_MAX];
@@ -33,7 +33,7 @@ static bool joint_pos_in_range(Robot* robot, int link_index, float value)
  * @param jp 
  * @return int 
  */
-static bool jp_in_range(Robot* robot, Vector3 jp)
+static bool jp_in_range(Robot robot, Vector3 jp)
 {
     return joint_pos_in_range(robot, ROBOT_JOINT_1, jp.x) &&
            joint_pos_in_range(robot, ROBOT_JOINT_2, jp.y) &&
@@ -48,7 +48,7 @@ static bool jp_in_range(Robot* robot, Vector3 jp)
  * @param value 
  * @return int 
  */
-static bool joint_vel_in_range(Robot* robot, int link_index, float value)
+static bool joint_vel_in_range(Robot robot, int link_index, float value)
 {
     bool in_range = value >= robot->joint_velocity_limits[link_index][ROBOT_LIMIT_MIN] &&
                     value <= robot->joint_velocity_limits[link_index][ROBOT_LIMIT_MAX];
@@ -63,7 +63,7 @@ static bool joint_vel_in_range(Robot* robot, int link_index, float value)
  * @param jp 
  * @return int 
  */
-static bool jv_in_range(Robot* robot, Vector3 jv)
+static bool jv_in_range(Robot robot, Vector3 jv)
 {
     return joint_vel_in_range(robot, ROBOT_JOINT_1, jv.x) &&
            joint_vel_in_range(robot, ROBOT_JOINT_2, jv.y) &&
@@ -85,7 +85,7 @@ static bool IsFiniteVector3(Vector3 v)
 
 
 
-FK_result ROBOT_forward_kinematics(Robot* robot, Vector3 target_JP)
+FK_result ROBOT_forward_kinematics(Robot robot, Vector3 target_JP)
 {
     FK_result result = {
         .TCP = Vector3Zero(),
@@ -128,7 +128,7 @@ FK_result ROBOT_forward_kinematics(Robot* robot, Vector3 target_JP)
 }
 
 
-IK_result ROBOT_inverse_kinematics(Robot* robot, Vector3 target_TCP)
+IK_result ROBOT_inverse_kinematics(Robot robot, Vector3 target_TCP)
 {
     LOG_DEBUG_MSG(NO_ERROR, "Calculating IK for target TCP: (%.3f, %.3f, %.3f)\n",
         target_TCP.x,
@@ -292,7 +292,7 @@ IK_result ROBOT_inverse_kinematics(Robot* robot, Vector3 target_TCP)
     return result;
 }
 
-JB_result ROBOT_jacobian_velcitys(Robot* robot, Vector3 target_TCP_vel){
+JB_result ROBOT_jacobian_velcitys(Robot robot, Vector3 target_TCP_vel){
 
     JB_result jb_sol  = {
         .tcp_velocity = Vector3Zero(), 

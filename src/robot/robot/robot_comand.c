@@ -30,7 +30,7 @@ static bool IsWithinLimitsTol(float value, float min_limit, float max_limit)
            value <= max_limit + CLAMP_TOLERANCE;
 }
 
-static JointCommandCheck CheckJointPositionTarget(Robot* self, Vector3 requested_jp)
+static JointCommandCheck CheckJointPositionTarget(Robot self, Vector3 requested_jp)
 {
     JointCommandCheck result = {
         .status = ROBOT_COMMAND_OK,
@@ -97,7 +97,7 @@ static float JointDelta(Vector3 a, Vector3 b)
     return Vector3Distance(a, b);
 }
 
-RobotCommandStatus ROBOT_SetJointPositionTarget(Robot* self, Vector3 joint_position_target)
+RobotCommandStatus ROBOT_SetJointPositionTarget(Robot self, Vector3 joint_position_target)
 {
     FK_result fk_sol;
 
@@ -138,7 +138,7 @@ RobotCommandStatus ROBOT_SetJointPositionTarget(Robot* self, Vector3 joint_posit
     return check.status;
 }
 
-RobotCommandStatus ROBOT_SetTCPPositionTarget(Robot* self, Vector3 tcp_position_target)
+RobotCommandStatus ROBOT_SetTCPPositionTarget(Robot self, Vector3 tcp_position_target)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -233,7 +233,7 @@ RobotCommandStatus ROBOT_SetTCPPositionTarget(Robot* self, Vector3 tcp_position_
     return checks[selected_solution].status;
 }
 
-RobotCommandStatus ROBOT_SetTCPVelocityTarget(Robot* self, Vector3 tcp_velocity_target)
+RobotCommandStatus ROBOT_SetTCPVelocityTarget(Robot self, Vector3 tcp_velocity_target)
 {
     if (!self) {
         RAISE(NullptrError);

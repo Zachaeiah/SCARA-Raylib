@@ -18,8 +18,8 @@
 #define ROBOT_POS_LOOP_HZ        100.0f
 #define ROBOT_POS_LOOP_TICKS     (ROBOT_VEL_LOOP_HZ / ROBOT_POS_LOOP_HZ)
 
-void ROBOT_VelocityLoop(Robot* self, float dt);
-void ROBOT_PositionLoop(Robot* self);
+void ROBOT_VelocityLoop(Robot self, float dt);
+void ROBOT_PositionLoop(Robot self);
 
 /** 
  * @brief Converts a joint index to a link index.
@@ -85,7 +85,7 @@ static RobotControllerIndex VelocityControllerFromJoint(RobotJointIndex joint)
  * @brief Reads the current state of each joint and updates the robot's internal state.
  * @param self A pointer to the Robot instance.
  */
-static void ROBOT_ReadJointState(Robot* self)
+static void ROBOT_ReadJointState(Robot self)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -105,7 +105,7 @@ static void ROBOT_ReadJointState(Robot* self)
  * @brief Resets the position controllers for all joints.
  * @param self A pointer to the Robot instance.
  */
-static void ROBOT_ResetPositionControllers(Robot* self)
+static void ROBOT_ResetPositionControllers(Robot self)
 {
     for (int i = 0; i < ROBOT_NUM_JOINTS; i++) {
         RobotJointIndex joint = (RobotJointIndex)i;
@@ -119,7 +119,7 @@ static void ROBOT_ResetPositionControllers(Robot* self)
  * @brief Resets the velocity controllers for all joints.
  * @param self A pointer to the Robot instance.
  */
-static void ROBOT_ResetVelocityControllers(Robot* self)
+static void ROBOT_ResetVelocityControllers(Robot self)
 {
     for (int i = 0; i < ROBOT_NUM_JOINTS; i++) {
         RobotJointIndex joint = (RobotJointIndex)i;
@@ -141,9 +141,9 @@ static bool ROBOT_IsValidLimitPair(float min_limit, float max_limit)
  * 
  * @param controllers an array of pointers to the controllers for each link
  * @param links an array of pointers to the links in the robot
- * @return Robot* pointer to the constructed Robot instance
+ * @return Robot pointer to the constructed Robot instance
  */
-Robot* ROBOT_Create(Controller* controllers[ROBOT_NUM_CTRLS],
+Robot ROBOT_Create(Controller* controllers[ROBOT_NUM_CTRLS],
                     Link links[ROBOT_NUM_LINKS])
 {
     if (!controllers || !links) {
@@ -151,7 +151,7 @@ Robot* ROBOT_Create(Controller* controllers[ROBOT_NUM_CTRLS],
         return NULL;
     }
 
-    Robot* self = NULL;
+    Robot self = NULL;
     NEW0(self);
 
     for (int i = 0; i < ROBOT_NUM_CTRLS; i++) {
@@ -193,7 +193,7 @@ Robot* ROBOT_Create(Controller* controllers[ROBOT_NUM_CTRLS],
 }
 
 void ROBOT_SetJointLimits(
-    Robot* self,
+    Robot self,
     const float joint_position_limits[ROBOT_NUM_JOINTS][ROBOT_NUM_LIMITS],
     const float joint_velocity_limits[ROBOT_NUM_JOINTS][ROBOT_NUM_LIMITS]
 )
@@ -237,7 +237,7 @@ void ROBOT_SetJointLimits(
 }
 
 
-Vector3 ROBOT_ApplyJointPositionLimits(Robot* self)
+Vector3 ROBOT_ApplyJointPositionLimits(Robot self)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -258,7 +258,7 @@ Vector3 ROBOT_ApplyJointPositionLimits(Robot* self)
     return limited_position;
 }
 
-float ROBOT_GetJointPositionAt(const Robot* self, RobotJointIndex joint)
+float ROBOT_GetJointPositionAt(const Robot self, RobotJointIndex joint)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -268,7 +268,7 @@ float ROBOT_GetJointPositionAt(const Robot* self, RobotJointIndex joint)
     return Vector3GetByJoint(self->current.joint_position, joint);
 }
 
-float ROBOT_GetJointVelocityAt(const Robot* self, RobotJointIndex joint)
+float ROBOT_GetJointVelocityAt(const Robot self, RobotJointIndex joint)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -278,7 +278,7 @@ float ROBOT_GetJointVelocityAt(const Robot* self, RobotJointIndex joint)
     return Vector3GetByJoint(self->current.joint_velocity, joint);
 }
 
-Vector3 ROBOT_GetJointPosition(const Robot* self)
+Vector3 ROBOT_GetJointPosition(const Robot self)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -289,7 +289,7 @@ Vector3 ROBOT_GetJointPosition(const Robot* self)
 }
 
 
-Vector3 ROBOT_GetJointVelocity(const Robot* self)
+Vector3 ROBOT_GetJointVelocity(const Robot self)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -299,7 +299,7 @@ Vector3 ROBOT_GetJointVelocity(const Robot* self)
     return self->current.joint_velocity;
 }
 
-Vector3 ROBOT_GetTCPPosition(const Robot* self)
+Vector3 ROBOT_GetTCPPosition(const Robot self)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -309,7 +309,7 @@ Vector3 ROBOT_GetTCPPosition(const Robot* self)
     return self->current.tcp_position;
 }
 
-Vector3 ROBOT_GetTCPVelocity(const Robot* self)
+Vector3 ROBOT_GetTCPVelocity(const Robot self)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -319,7 +319,7 @@ Vector3 ROBOT_GetTCPVelocity(const Robot* self)
     return self->current.tcp_velocity;
 }
 
-void ROBOT_GetState(const Robot* self, RobotState* out_state)
+void ROBOT_GetState(const Robot self, RobotState* out_state)
 {
     if (!self || !out_state) {
         RAISE(NullptrError);
@@ -329,7 +329,7 @@ void ROBOT_GetState(const Robot* self, RobotState* out_state)
     *out_state = self->current;
 }
 
-void ROBOT_HandleModeChange(Robot* self)
+void ROBOT_HandleModeChange(Robot self)
 {
     if (self->mode == self->previous_mode) {
         return;
@@ -384,7 +384,7 @@ void ROBOT_HandleModeChange(Robot* self)
 }
 
 
-void ROBOT_Update(Robot* self, float dt)
+void ROBOT_Update(Robot self, float dt)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -436,7 +436,7 @@ void ROBOT_Update(Robot* self, float dt)
     }
 }
 
-void ROBOT_Draw(Robot* self)
+void ROBOT_Draw(Robot self)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -477,7 +477,7 @@ void ROBOT_Draw(Robot* self)
     self->current.tcp_position = tcp;
 }
 
-void ROBOT_VelocityLoop(Robot* self, float dt)
+void ROBOT_VelocityLoop(Robot self, float dt)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -537,7 +537,7 @@ void ROBOT_VelocityLoop(Robot* self, float dt)
 }
 
 
-void ROBOT_PositionLoop(Robot* self)
+void ROBOT_PositionLoop(Robot self)
 {
     if (!self) {
         RAISE(NullptrError);
@@ -619,7 +619,7 @@ void Vector3SetByJoint(Vector3* v, RobotJointIndex joint, float value){
     }
 }
 
-void ROBOT_Destroy(Robot* self)
+void ROBOT_Destroy(Robot self)
 {
     if (!self) {
         return;

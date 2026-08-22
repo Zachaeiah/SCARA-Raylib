@@ -311,7 +311,7 @@ static void GUI_SIM_PANEL_DrawTCPTargetEditor(GuiSimPanel* panel, int posY)
     }
 }
 
-void GUI_SIM_PANEL_Init(GuiSimPanel* panel, Robot* robot)
+void GUI_SIM_PANEL_Init(GuiSimPanel* panel, Robot robot)
 {
     if (!panel) {
         RAISE(NullptrError);
@@ -418,7 +418,7 @@ void GUI_SIM_PANEL_Draw(GuiSimPanel* panel)
 
 }
 
-void GUI_SIM_PANEL_Update(GuiSimPanel* panel, Robot* robot)
+void GUI_SIM_PANEL_Update(GuiSimPanel* panel, Robot robot)
 {
     if (!panel) {
         RAISE(NullptrError);

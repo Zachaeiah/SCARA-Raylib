@@ -30,7 +30,7 @@ typedef struct GuiSimPanel {
  * @param self pointer to the GuiSimPanel instance to initialize
  * @param robot pointer to the Robot instance
  */
-extern void GUI_SIM_PANEL_Init(GuiSimPanel* self, Robot* robot);
+extern void GUI_SIM_PANEL_Init(GuiSimPanel* self, Robot robot);
 
 /**
  * @brief Draws the simulation panel
@@ -45,6 +45,6 @@ extern void GUI_SIM_PANEL_Draw(GuiSimPanel* self);
  * @param self pointer to the GuiSimPanel instance to update
  * @param robot pointer to the Robot instance
  */
-extern void GUI_SIM_PANEL_Update(GuiSimPanel* self, Robot* robot);
+extern void GUI_SIM_PANEL_Update(GuiSimPanel* self, Robot robot);
 
 #endif

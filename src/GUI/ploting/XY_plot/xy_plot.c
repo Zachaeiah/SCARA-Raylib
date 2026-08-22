@@ -7,7 +7,7 @@ const Except_t XYPLOT_Failed = {"XYPlot failed"};
  * @brief Represents a 2D XY plot with specified bounds and ranges for the x and y axes.
  * 
  */
-typedef struct XYPlot {
+struct XYPlot {
     Vector2 pos;     // Bottom-left corner of graph
 
     float width;

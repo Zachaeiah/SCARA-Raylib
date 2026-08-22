@@ -59,7 +59,7 @@ const ErrorType XYPLOT_Failed_ErrorCode  =10; /**< Represents XYPLOT Failed  fai
 // ---------------------------------------------------------
 static Camera camera = { 0 };
 
-static Robot* SCARA;
+static Robot SCARA;
 
 // actuator velocity controller
 Controller* PID1_vel = NULL;
@@ -113,7 +113,7 @@ void Pos_Ctrl_Update(void);
 void Control_Update(void);
 void IdleTasks(void);
 void UpdateDrawFrame(void);
-void UpdateTestPoseCycle(Robot* robot, double now);
+void UpdateTestPoseCycle(Robot robot, double now);
 
 // ---------------------------------------------------------
 // Main
@@ -336,7 +336,7 @@ void Control_Update(void)
 
 }
 
-void UpdateTestPoseCycle(Robot* robot, double now)
+void UpdateTestPoseCycle(Robot robot, double now)
 {
     /*
         JP meaning assumed:

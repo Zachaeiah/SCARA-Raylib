@@ -17,7 +17,8 @@ extern const ErrorType TCP_CMD_CLAMPED_ErrorCode;
 extern const ErrorType TCP_CMD_REJECTED_ErrorCode;
     
 // Forward declarations
-typedef struct Robot Robot;
+#define R Robot
+typedef struct R *R;
 
 typedef enum RobotControllerIndex {
     ROBOT_CTRL_J1_POS = 0,
@@ -74,7 +75,7 @@ typedef struct RobotState {
  * @param links An array of pointers to Link instances, one for each robot link.
  * @return Robot* A pointer to the newly created Robot instance, or NULL if creation failed due to invalid parameters.
  */
-extern Robot* ROBOT_Create(Controller* controllers[ROBOT_NUM_CTRLS],
+extern R ROBOT_Create(Controller* controllers[ROBOT_NUM_CTRLS],
                     Link links[ROBOT_NUM_LINKS]);
 
 
@@ -83,7 +84,7 @@ extern Robot* ROBOT_Create(Controller* controllers[ROBOT_NUM_CTRLS],
  * 
  * @param self A pointer to the Robot instance to be destroyed. If NULL, the function does nothing.
  */
-extern void ROBOT_Destroy(Robot* self);
+extern void ROBOT_Destroy(R self);
 
 /**
  * @brief Applies velocity limits to the robot's joint velocities and returns the resulting state.
@@ -91,7 +92,7 @@ extern void ROBOT_Destroy(Robot* self);
  * @param self A pointer to the Robot instance.
  * @return Vector3 A Vector3 struct containing the joint velocities after applying velocity limits.
  */
-extern Vector3 ROBOT_ApplyJointVelocityLimits(Robot* self);
+extern Vector3 ROBOT_ApplyJointVelocityLimits(R self);
 
 /**
  * @brief Gets the current position of the robot's joints.
@@ -99,7 +100,7 @@ extern Vector3 ROBOT_ApplyJointVelocityLimits(Robot* self);
  * @param self A pointer to the Robot instance.
  * @return Vector3 The positions of the robot's joints.
  */
-extern Vector3 ROBOT_GetJointPosition(const Robot* self);
+extern Vector3 ROBOT_GetJointPosition(const R self);
 
 /**
  * @brief Gets the velocity of the robot's joints.
@@ -107,7 +108,7 @@ extern Vector3 ROBOT_GetJointPosition(const Robot* self);
  * @param self A pointer to the Robot instance.
  * @return Vector3 The velocities of the robot's joints.
  */
-extern Vector3 ROBOT_GetJointVelocity(const Robot* self);
+extern Vector3 ROBOT_GetJointVelocity(const R self);
 
 /**
  * @brief Gets the position of a specific joint.
@@ -116,7 +117,7 @@ extern Vector3 ROBOT_GetJointVelocity(const Robot* self);
  * @param joint The index of the joint for which to get the position.
  * @return float The position of the specified joint.
  */
-extern float ROBOT_GetJointPositionAt(const Robot* self, RobotJointIndex joint);
+extern float ROBOT_GetJointPositionAt(const R self, RobotJointIndex joint);
 
 /**
  * @brief Gets the velocity of a specific joint.
@@ -125,7 +126,7 @@ extern float ROBOT_GetJointPositionAt(const Robot* self, RobotJointIndex joint);
  * @param joint The index of the joint for which to get the velocity.
  * @return float The velocity of the specified joint.
  */
-extern float ROBOT_GetJointVelocityAt(const Robot* self, RobotJointIndex joint);
+extern float ROBOT_GetJointVelocityAt(const R self, RobotJointIndex joint);
 
 /**
  * @brief Gets the current position of the robot's TCP.
@@ -133,7 +134,7 @@ extern float ROBOT_GetJointVelocityAt(const Robot* self, RobotJointIndex joint);
  * @param self A pointer to the Robot instance.
  * @return Vector3 The position of the TCP.
  */
-extern Vector3 ROBOT_GetTCPPosition(const Robot* self);
+extern Vector3 ROBOT_GetTCPPosition(const R self);
 
 /**
  * @brief Gets the current velocity of the robot's TCP.
@@ -141,7 +142,7 @@ extern Vector3 ROBOT_GetTCPPosition(const Robot* self);
  * @param self A pointer to the Robot instance.
  * @return Vector3 The velocity of the TCP.
  */
-extern Vector3 ROBOT_GetTCPVelocity(const Robot* self);
+extern Vector3 ROBOT_GetTCPVelocity(const R self);
 
 /**
  * @brief gets the current state of the robot, including joint positions, joint velocities, TCP position, and TCP velocity.
@@ -149,7 +150,7 @@ extern Vector3 ROBOT_GetTCPVelocity(const Robot* self);
  * @param self A pointer to the Robot instance.
  * @param out_state A pointer to a RobotState struct where the current state of the robot will be stored. Must not be NULL.
  */
-extern void ROBOT_GetState(const Robot* self, RobotState* out_state);
+extern void ROBOT_GetState(const R self, RobotState* out_state);
 
 /**
  * @brief Updates the robot's state based on the current control mode and target values. This function should be called in a loop with a consistent time step to ensure proper control behavior.
@@ -157,21 +158,21 @@ extern void ROBOT_GetState(const Robot* self, RobotState* out_state);
  * @param self A pointer to the Robot instance.
  * @param dt 
  */
-extern void ROBOT_Update(Robot* self, float dt);
+extern void ROBOT_Update(R self, float dt);
 
 /**
  * @brief Draws the robot using raylib's drawing functions. This function should visualize the robot's current state, including joint angles and TCP position, in a way that reflects the robot's configuration.
  * 
  * @param self A pointer to the Robot instance.
  */
-extern void ROBOT_Draw(Robot* self);
+extern void ROBOT_Draw(R self);
 
 /**
  * @brief Handles changes in the robot's control mode, such as switching between position and velocity control. This function should reset relevant controllers and update internal state as needed when the control mode changes.
  * 
  * @param self A pointer to the Robot instance.
  */
-extern void ROBOT_HandleModeChange(Robot* self);
+extern void ROBOT_HandleModeChange(R self);
 
 
 /** 
@@ -189,6 +190,8 @@ extern float Vector3GetByJoint(Vector3 v, RobotJointIndex joint);
  * @param value The value to set for the specified component.
  */
 extern void Vector3SetByJoint(Vector3* v, RobotJointIndex joint, float value);
+
+#undef R
 
 #ifdef __cplusplus
 }

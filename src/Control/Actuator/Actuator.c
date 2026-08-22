@@ -32,7 +32,7 @@ static float clampf(float value, float min, float max)
  * processes it through the ZFilter, and then applies saturation to the output.
  * 
  */
-typedef struct Actuator{
+struct Actuator{
     ZFilter filter;
     float Dead_Zone;
     float Saturation;
