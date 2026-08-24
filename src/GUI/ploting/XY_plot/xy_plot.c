@@ -237,7 +237,16 @@ XYPlot XYPlot_Create(
         return NULL;
     }
 
-    NEW0(plot);
+    TRY {
+        NEW0(plot);
+    } 
+    EXCEPT(Mem_Failed) {
+        LOG_ERROR_MSG(XYPLOT_Failed_ErrorCode,"Memory allocation failed for XYPlot");
+
+        if (plot) XYPlot_Destroy(plot);
+
+        RAISE(XYPLOT_Failed);
+    } END_TRY;
 
     plot->pos = pos;
 
