@@ -10,6 +10,7 @@ const Except_t Controller_failed = {"Controller error"};
 Controller Controller_create(const ControllerType* type, ...)
 {
     Controller self = NULL;
+    va_list args;
 
     if (!type) {
         RAISE(NullptrError);
@@ -31,27 +32,25 @@ Controller Controller_create(const ControllerType* type, ...)
         Allocate the full derived object, not just the base Controller.
         CALLOC makes partial-construction cleanup safe.
     */
-    self = CALLOC(1, type->size);
-    self->type = type;
+    TRY {
+        self = CALLOC(1, type->size);
+        self->type = type;
 
-    if (type->vtable->ctor) {
-        va_list args;
         va_start(args, type);
 
-        TRY {
+        if (type->vtable->ctor) {
             self->type->vtable->ctor(self, &args);
         }
-        ELSE {
-            LOG_ERROR_MSG(Controller_ErrorCode, "failed to create controller");
-            Controller_destroy(self);
-            RAISE(Controller_failed);
-        }
-        FINALLY {
-            va_end(args);
-        }
-        END_TRY;
-
     }
+    ELSE {
+        LOG_ERROR_MSG(Controller_ErrorCode, "failed to create controller");
+        Controller_destroy(self);
+        RAISE(Controller_failed);
+    }
+    FINALLY {
+        va_end(args);
+    }
+    END_TRY;
 
     return self;
 }

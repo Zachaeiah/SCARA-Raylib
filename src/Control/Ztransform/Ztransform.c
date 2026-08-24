@@ -77,6 +77,8 @@ float ZFilter_update(ZFilter f, float x)
     assert_debug(f->a);
     assert_debug(f->x_hist);
 
+    float y = 0.0f;
+
     if (f->nb > 1) {
         memmove(&f->x_hist[1],
                 &f->x_hist[0],
@@ -84,8 +86,6 @@ float ZFilter_update(ZFilter f, float x)
     }
 
     f->x_hist[0] = x;
-
-    float y = 0.0f;
 
     for (uint32_t i = 0; i < f->nb; i++) {
         y += f->b[i] * f->x_hist[i];
