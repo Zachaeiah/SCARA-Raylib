@@ -37,6 +37,11 @@ const ErrorType Controller_ErrorCode = 9; /**< Represents a generic controller e
 const ErrorType Actuator_Failed_ErrorCode = 10; /**< Represents Actuator failure error code. */
 
 const ErrorType XYPLOT_Failed_ErrorCode  =10; /**< Represents XYPLOT Failed  failure error code. */
+const ErrorType PID_Failed_ErrorCode = 11; /**< Represents PID controller failure error code. */
+
+const ErrorType GUIROOT_Failed_ErrorCode = 12; /**< Represents GUIROOT failure error code. */
+
+const ErrorType LIST_Failed_ErrorCode = 13; /**< Represents LIST failure error code. */
 
 // ---------------------------------------------------------
 // Timing
