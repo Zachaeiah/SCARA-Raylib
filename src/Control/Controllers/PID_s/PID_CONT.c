@@ -7,6 +7,8 @@
 #include <stdint.h>
 #include <stdarg.h>
 
+const Except_t PID_Failed = {"PID Controller failed"};
+
 /**
  * @brief The PIDController structure, which extends the base Controller structure.
  * 
@@ -40,7 +42,17 @@ static void PIDController_ctor(Controller self, va_list* args)
      * @param self A pointer to the Controller structure.
      * @param args A pointer to the variable arguments list.
      */
-    pid->PID_filter = ZFilter_ctor(b, nb, a, na);
+    TRY{
+        pid->PID_filter = ZFilter_ctor(b, nb, a, na);
+        
+    }EXCEPT(NullptrError) {
+        LOG_ERROR_MSG(PID_Failed_ErrorCode, "PID filter failed to initialize: %s", Except_frame.exception->reason);
+        if (pid->PID_filter)
+        {
+            ZFilter_dtor(pid->PID_filter);
+        }
+        RAISE(PID_Failed);
+    } END_TRY;
 }
 
 /**
