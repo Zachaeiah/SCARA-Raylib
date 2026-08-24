@@ -23,7 +23,10 @@ Array_T Array_new(int length, int size)
 void ArrayRep_init(Array_T array, int length, int size, void *ary) 
 {
 	assert(array);
-	assert(ary && length>0 || length==0 && ary==NULL);
+	assert(ary);
+	assert(length>0);
+	assert(length==0);
+	assert(ary==NULL);
 	assert(size > 0);
 
 	array->length = length;

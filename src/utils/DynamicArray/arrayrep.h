@@ -11,7 +11,7 @@ extern "C" {
 struct T {
 	int length; // number of elements in the array
 	int size; // size of each element in bytes
-	char *array // pointer to the memory block containing the array elements
+	char *array; // pointer to the memory block containing the array elements
 };
 
 /**
