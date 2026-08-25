@@ -43,6 +43,10 @@ const ErrorType GUIROOT_Failed_ErrorCode = 12; /**< Represents GUIROOT failure e
 
 const ErrorType LIST_Failed_ErrorCode = 13; /**< Represents LIST failure error code. */
 
+const ErrorType ARRAY_Failed_ErrorCode = 14;
+
+const ErrorType GUI_Failed_ErrorCode = 15;
+
 // ---------------------------------------------------------
 // Timing
 // ---------------------------------------------------------
@@ -109,7 +113,9 @@ Link link2 = NULL;
 Link link3 = NULL;
 Link link4 = NULL;
 
-static GuiSimPanel gui_sim_panel;
+static GuiSimPanel gui_sim_panel = NULL;
+
+static Rectangle Screen_layout = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT };
 
 // ---------------------------------------------------------
 // Functions
@@ -119,6 +125,7 @@ void Control_Update(void);
 void IdleTasks(void);
 void UpdateDrawFrame(void);
 void UpdateTestPoseCycle(Robot robot, double now);
+void DrawWorldAxes3D(float length);
 
 // ---------------------------------------------------------
 // Main
@@ -155,15 +162,18 @@ int main(void)
     Vector3 link4Dim = { 3.5f, 17.0f, 3.5f }; // link 2 none
 
     // setup simple plands for easy testing
+    LOG_DEBUG_MSG(NO_ERROR, "Initializing Motor plant's");
     motor_plant1 = ZFilter_ctor(VELOCITY_PLANT_NUM, VELOCITY_PLANT_NUM_LEN, VELOCITY_PLANT_DEN, VELOCITY_PLANT_DEN_LEN);
     motor_plant2 = ZFilter_ctor(VELOCITY_PLANT_NUM, VELOCITY_PLANT_NUM_LEN, VELOCITY_PLANT_DEN, VELOCITY_PLANT_DEN_LEN);
     motor_plant3 = ZFilter_ctor(VELOCITY_PLANT_NUM, VELOCITY_PLANT_NUM_LEN, VELOCITY_PLANT_DEN, VELOCITY_PLANT_DEN_LEN);
 
     // setup simple actuator for testing
+    LOG_DEBUG_MSG(NO_ERROR, "Initializing Actuator's");
     actuator1 = Actuator_ctor(motor_plant1, Dead_Zone, Saturation);
     actuator2 = Actuator_ctor(motor_plant2, Dead_Zone, Saturation);
     actuator3 = Actuator_ctor(motor_plant3, Dead_Zone, Saturation);
 
+    LOG_DEBUG_MSG(NO_ERROR, "Initializing link's");
     // Base visual only. No actuator.
     link1 = LINK_Create(link1Dim, RED, LINK_BASE, NULL);
 
@@ -177,11 +187,13 @@ int main(void)
     link4 = LINK_Create(link4Dim, ORANGE, LINK_PRISMATIC, actuator3);
 
     // P controller for actuator velocity
+    LOG_DEBUG_MSG(NO_ERROR, "Initializing Controller PIDx_vel");
     PID1_vel = Controller_create(&PIDController_Type, VELOCITY_CONTROLLER_NUM, VELOCITY_CONTROLLER_NUM_LEN, VELOCITY_CONTROLLER_DEN, VELOCITY_CONTROLLER_DEN_LEN);
     PID2_vel = Controller_create(&PIDController_Type, VELOCITY_CONTROLLER_NUM, VELOCITY_CONTROLLER_NUM_LEN, VELOCITY_CONTROLLER_DEN, VELOCITY_CONTROLLER_DEN_LEN);
     PID3_vel = Controller_create(&PIDController_Type, VELOCITY_CONTROLLER_NUM, VELOCITY_CONTROLLER_NUM_LEN, VELOCITY_CONTROLLER_DEN, VELOCITY_CONTROLLER_DEN_LEN);
 
     // P controller for actuator posion
+    LOG_DEBUG_MSG(NO_ERROR, "Initializing Controller PIDx_pos");
     PID1_pos = Controller_create(&PIDController_Type, POSITION_CONTROLLER_NUM, POSITION_CONTROLLER_NUM_LEN, POSITION_CONTROLLER_DEN, POSITION_CONTROLLER_DEN_LEN);
     PID2_pos = Controller_create(&PIDController_Type, POSITION_CONTROLLER_NUM, POSITION_CONTROLLER_NUM_LEN, POSITION_CONTROLLER_DEN, POSITION_CONTROLLER_DEN_LEN);
     PID3_pos = Controller_create(&PIDController_Type, POSITION_CONTROLLER_NUM, POSITION_CONTROLLER_NUM_LEN, POSITION_CONTROLLER_DEN, POSITION_CONTROLLER_DEN_LEN);
@@ -190,10 +202,13 @@ int main(void)
     Link links[ROBOT_NUM_LINKS] = {link1, link2, link3, link4};
     
     // setup scara robot with simple setup for testing
+    LOG_DEBUG_MSG(NO_ERROR, "Initializing ROBOT");
     SCARA = ROBOT_Create(controllers, links);
 
     // setup GUI panel with initial robot state
-    GUI_SIM_PANEL_Init(&gui_sim_panel, SCARA);
+    LOG_DEBUG_MSG(NO_ERROR, "Initializing GUI_SIM_PANEL");
+
+    gui_sim_panel = GUI_SIM_PANEL_Init(SCARA, &Screen_layout);
 
     // set joint limits
     ROBOT_SetJointLimits(SCARA, jp_limits, jp_velocity_limits);
@@ -210,8 +225,6 @@ int main(void)
 
     double next_pid_time = now;
     double next_render_time = now;
-
-    LOG_MESSAGE("Program started");
 
     while (!WindowShouldClose())
     {
@@ -271,6 +284,8 @@ int main(void)
     }
 
     ROBOT_Destroy(SCARA);
+
+    GUI_SIM_PANEL_Destroy(gui_sim_panel);
 
     Controller_destroy(PID1_vel);
     Controller_destroy(PID2_vel);
@@ -341,93 +356,6 @@ void Control_Update(void)
 
 }
 
-void UpdateTestPoseCycle(Robot robot, double now)
-{
-    /*
-        JP meaning assumed:
-            x = joint 1 angle, radians
-            y = joint 2 angle, radians
-            z = prismatic joint position
-
-        If your prismatic joint moves the opposite direction,
-        flip the signs on the z values.
-    */
-
-    float const Rad30  = 30.0f  * DEG2RAD;
-    float const Rad45  = 45.0f  * DEG2RAD;
-    float const Rad90  = 90.0f  * DEG2RAD;
-    float const Rad125 = 125.0f * DEG2RAD;
-
-    float const Z_TOP = 0.0f;
-    float const Z_MID = 17.0f / 2.0f;
-    float const Z_LOW = 17.0f;
-
-    static const Vector3 test_poses[] = {
-        // Home / neutral
-        {  Rad30,    0.0f,     Z_TOP },
-        {  Rad30,    Rad30,    Z_TOP },
-        {  Rad30,    Rad30,    Z_LOW },
-
-        // Joint 1 only
-        {  Rad45,   0.0f,    Z_TOP },
-        { -Rad45,   0.0f,    Z_LOW },
-        {  Rad90,   0.0f,    Z_TOP },
-        { -Rad90,   0.0f,    Z_LOW },
-
-        // Joint 2 only
-        {  0.0f,    Rad45,   Z_LOW },
-        {  0.0f,   -Rad45,   Z_MID },
-        {  0.0f,    Rad90,   Z_LOW },
-        {  0.0f,   -Rad90,   Z_MID },
-
-        // Same direction bends
-        {  Rad45,   Rad45,   Z_TOP },
-        { -Rad45,  -Rad45,   Z_MID },
-        {  Rad90,   Rad45,   Z_TOP },
-        { -Rad90,  -Rad45,   Z_MID },
-
-        // Opposite direction bends
-        {  Rad45,  -Rad45,   Z_LOW },
-        { -Rad45,   Rad45,   Z_LOW },
-        {  Rad90,  -Rad90,   Z_LOW },
-        { -Rad90,   Rad90,   Z_MID },
-
-        // Near-limit stress tests
-        {  Rad125,  Rad125,  Z_TOP },
-        {  Rad125, -Rad125,  Z_LOW },
-        { -Rad125,  Rad125,  Z_TOP },
-        { -Rad125, -Rad125,  Z_LOW },
-
-        // Smaller smooth-motion checks
-        {  Rad30,  -Rad30,   Z_MID },
-        { -Rad30,   Rad30,   Z_MID },
-    };
-
-    static bool initialized = false;
-    static size_t pose_index = 0;
-    static double next_pose_time = 0.0;
-
-    if (!robot) {
-        return;
-    }
-
-    if (!initialized) {
-        ROBOT_SetJointPositionTarget(robot, test_poses[pose_index]);
-        next_pose_time = now + TEST_POSE_PERIOD_SEC;
-        initialized = true;
-        return;
-    }
-
-    if (now >= next_pose_time) {
-        pose_index = (pose_index + 1) % (sizeof(test_poses) / sizeof((test_poses)[0]));
-
-        ROBOT_SetJointPositionTarget(robot, test_poses[pose_index]);
-
-        // Resync from current time so it does not try to catch up.
-        next_pose_time = now + TEST_POSE_PERIOD_SEC;
-    }
-}
-
 // ---------------------------------------------------------
 // Runs only when PID and render are not due
 // Put low-priority background work here.
@@ -443,6 +371,106 @@ void IdleTasks(void)
     //
     // Keep this short.
     // Do not block here.
+}
+
+
+
+// ---------------------------------------------------------
+// Runs at 60 FPS
+// Put raylib drawing here.
+// ---------------------------------------------------------
+
+#define PLOT_POINTS 200
+
+void UpdateDrawFrame(void)
+{
+    static float phase = 0.0f;
+
+    float x[PLOT_POINTS];
+    float y[PLOT_POINTS];
+
+    size_t count = PLOT_POINTS;
+
+    // Generate sine wave
+    for (size_t i = 0; i < count; i++)
+    {
+        x[i] = ((float)i / (float)(count - 1)) * 2.0f * PI;
+
+        y[i] = sinf(x[i] + phase);
+    }
+
+    // Move phase from 0 -> 2PI
+    phase += 0.03f;
+
+    if (phase >= 2.0f * PI)
+        phase -= 2.0f * PI;
+
+
+    XYPlot plot = XYPlot_Create(
+        (Vector2){ 1550, 300 },
+        400,
+        250
+    );
+
+    XYPlot_SetRange(
+        plot,
+        0.0f,
+        2.0f * PI,
+        -1.5f,
+        1.5f
+    );
+
+    XYPlot_SetGrid(
+        plot,
+        PI / 2.0f,
+        0.5f,
+        5
+    );
+
+    XYPlot_SetLabels(
+        plot,
+        "Angle (rad)",
+        "Amplitude"
+    );
+
+
+    // Update camera
+    UpdateCamera(&camera, CAMERA_ORBITAL);
+
+    // Update GUI
+    GUI_SIM_PANEL_Update(gui_sim_panel, SCARA);
+
+
+    BeginDrawing();
+
+        ClearBackground(RAYWHITE);
+
+        BeginMode3D(camera);
+
+            DrawGrid(30, 2.5f);
+            DrawWorldAxes3D(50.0f);
+            ROBOT_Draw(SCARA);
+
+        EndMode3D();
+
+
+        // Draw GUI
+        GUI_SIM_PANEL_Draw(gui_sim_panel);
+
+        XYPlot_DrawPoint(plot, 2.5f, 0.75f, "Target", BLUE);
+
+
+        // Draw moving sine wave
+        XYPlot_Draw(
+            plot,
+            x,
+            y,
+            count,
+            RED
+        );
+
+    EndDrawing();
+
 }
 
 void DrawWorldAxes3D(float length)
@@ -512,102 +540,4 @@ void DrawWorldAxes3D(float length)
 
     // Origin marker
     DrawSphere(origin, 0.12f, BLACK);
-}
-
-// ---------------------------------------------------------
-// Runs at 60 FPS
-// Put raylib drawing here.
-// ---------------------------------------------------------
-
-#define PLOT_POINTS 200
-
-void UpdateDrawFrame(void)
-{
-    static float phase = 0.0f;
-
-    float x[PLOT_POINTS];
-    float y[PLOT_POINTS];
-
-    size_t count = PLOT_POINTS;
-
-    // Generate sine wave
-    for (size_t i = 0; i < count; i++)
-    {
-        x[i] = ((float)i / (float)(count - 1)) * 2.0f * PI;
-
-        y[i] = sinf(x[i] + phase);
-    }
-
-    // Move phase from 0 -> 2PI
-    phase += 0.03f;
-
-    if (phase >= 2.0f * PI)
-        phase -= 2.0f * PI;
-
-
-    XYPlot plot = XYPlot_Create(
-        (Vector2){ 1550, 300 },
-        400,
-        250
-    );
-
-    XYPlot_SetRange(
-        plot,
-        0.0f,
-        2.0f * PI,
-        -1.5f,
-        1.5f
-    );
-
-    XYPlot_SetGrid(
-        plot,
-        PI / 2.0f,
-        0.5f,
-        5
-    );
-
-    XYPlot_SetLabels(
-        plot,
-        "Angle (rad)",
-        "Amplitude"
-    );
-
-
-    // Update camera
-    UpdateCamera(&camera, CAMERA_ORBITAL);
-
-    // Update GUI
-    GUI_SIM_PANEL_Update(&gui_sim_panel, SCARA);
-
-
-    BeginDrawing();
-
-        ClearBackground(RAYWHITE);
-
-        BeginMode3D(camera);
-
-            DrawGrid(30, 2.5f);
-            DrawWorldAxes3D(50.0f);
-            ROBOT_Draw(SCARA);
-
-        EndMode3D();
-
-
-        // Draw GUI
-        GUI_SIM_PANEL_Draw(&gui_sim_panel);
-
-        XYPlot_DrawPoint(plot, 2.5f, 0.75f, "Target", BLUE);
-
-
-        // Draw moving sine wave
-        XYPlot_Draw(
-            plot,
-            x,
-            y,
-            count,
-            RED
-        );
-
-    EndDrawing();
-
 }

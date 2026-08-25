@@ -114,7 +114,7 @@ void Logger_log(int severity, const char* file, const char* func, const uint16_t
     va_copy(fileArgs, consoleArgs);
 
     
-    if (error == NO_ERROR) {
+    if (error == NO_ERROR && severity == LOG_DEBUG) {
         formatMsg_v(consoleBuff, sizeof(consoleBuff), severity,
                     strError, consoleArgs);
 
