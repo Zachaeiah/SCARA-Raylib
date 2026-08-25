@@ -7,33 +7,47 @@
 #include "array.h"
 #include "arrayrep.h"
 
+const Except_t ARRAY_Failed = {"Array Faild"};
+
 Array_T Array_new(int length, int size) 
 {
 	Array_T array;
+	void *ary = NULL;
 
 	NEW(array);
 
-	if (length > 0)
-		ArrayRep_init(array, length, size, CALLOC(length, size));
-	else
+	if (length > 0){
+		TRY
+		{
+			ary = CALLOC(length, size);
+		}
+		EXCEPT(Mem_Failed)
+		{
+			LOG_ERROR_MSG(ARRAY_Failed_ErrorCode, "Memory allocation failed for Array");
+			RAISE(ARRAY_Failed);
+
+		} END_TRY;
+
+
+		ArrayRep_init(array, length, size, ary);
+	}
+	else{
 		ArrayRep_init(array, length, size, NULL);
+	}
 	return array;
 }
 
 void ArrayRep_init(Array_T array, int length, int size, void *ary) 
 {
 	assert(array);
-	assert(ary);
-	assert(length>0);
-	assert(length==0);
-	assert(ary==NULL);
-	assert(size > 0);
+    assert(size > 0);
+    assert((length == 0 && ary == NULL) || (length > 0  && ary != NULL));
 
 	array->length = length;
 	array->size   = size;
 
 	if (length > 0)
-		array->array = ary;
+		array->array = ary; 
 	else
 		array->array = NULL;
 }

@@ -9,6 +9,9 @@ extern "C" {
 #define T Array_T
 typedef struct T *T;
 
+extern const Except_t ARRAY_Failed;
+extern const ErrorType ARRAY_Failed_ErrorCode;
+
 /**
  * @brief Create a new dynamic array with specified length and element size.
  * 
