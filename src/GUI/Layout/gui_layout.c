@@ -161,6 +161,7 @@ GuiLayout GuiLayout_Create(const Rectangle *rect)
 
     GuiLayout layout = NULL;
 
+
     NEW0(layout);
 
     /*
@@ -168,7 +169,7 @@ GuiLayout GuiLayout_Create(const Rectangle *rect)
      *
      * Start with zero nodes.
      */
-    layout->nodes = Array_new(0,  sizeof(GuiNode *));
+    layout->nodes = Array_new(1,  sizeof(GuiNode *));
 
     /*
      * Create root node.
