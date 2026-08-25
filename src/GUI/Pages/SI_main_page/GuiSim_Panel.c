@@ -12,6 +12,58 @@
 #define FIELD_WIDTH 9
 #define PRECISION 3
 
+const Except_t GUI_Failed = {"GUI fiald"};
+
+struct GuiSimPanel
+{
+    /*
+     * Robot state
+     */
+    RobotState State;
+    RobotState CommandedState;
+
+    /*
+     * Text entry
+     */
+    char joint_target_text[GUI_SIM_AXIS_COUNT][GUI_SIM_FIELD_TEXT_SIZE];
+    char TCP_target_text[GUI_SIM_AXIS_COUNT][GUI_SIM_FIELD_TEXT_SIZE];
+
+    bool joint_target_edit[GUI_SIM_AXIS_COUNT];
+    bool TCP_target_edit[GUI_SIM_AXIS_COUNT];
+
+    /*
+     * GUI state
+     */
+    bool use_degrees;
+
+    bool has_command_message;
+    bool apply_joint_target_requested;
+    bool TCP_joint_target_requested;
+
+    /*
+     * Layout
+     */
+    GuiLayout layout;
+
+
+    GuiNodeID root;
+    
+    GuiNodeID Robot_report;
+
+    GuiNodeID units_toggle;
+
+    GuiNodeID state_section;
+
+    GuiNodeID joint_section;
+    GuiNodeID joint_fields[GUI_SIM_AXIS_COUNT];
+    GuiNodeID joint_button;
+
+    GuiNodeID tcp_section;
+    GuiNodeID tcp_fields[GUI_SIM_AXIS_COUNT];
+    GuiNodeID tcp_button;
+
+};
+
 /**
  * @brief Parses a float from a string
  * @param text The string to parse
@@ -35,63 +87,20 @@ static float GUI_SIM_PANEL_ParseFloat(const char* text, float fallback)
 }
 
 /**
- * @brief Draws a row for displaying a Vector3 value
- * @param label The label for the row
- * @param value The Vector3 value to display
- * @param y The y-coordinate for the row
- */
-static void GUI_SIM_PANEL_DrawVector3Row(
-    const char* label,
-    Vector3 value,
-    int y
-)
-{
-    DrawText(label, 25, y, 16, DARKGRAY);
-    int Spaceing = 80;
-    int Row1X = 110 + Spaceing;
-    int Row2X = Row1X + Spaceing;
-    int Row3X = Row2X + Spaceing;
-
-    DrawText(
-        TextFormat("%*.*f", FIELD_WIDTH, PRECISION, value.x),
-        Row1X,
-        y,
-        16,
-        DARKGRAY
-    );
-
-    DrawText(
-        TextFormat("%*.*f", FIELD_WIDTH, PRECISION, value.y),
-        Row2X,
-        y,
-        16,
-        DARKGRAY
-    );
-
-    DrawText(
-        TextFormat("%*.*f", FIELD_WIDTH, PRECISION, value.z),
-        Row3X,
-        y,
-        16,
-        DARKGRAY
-    );
-}
-
-/**
  * @brief Converts joint position from radians/meters to display units (degrees/meters)
  * 
  * @param joint_rad_m Joint position in radians (for revolute joints) and meters (for prismatic joint)
  * @param use_degrees Whether to convert radians to degrees for revolute joints
  * @return Vector3 Joint position in display units (degrees for revolute joints, meters for prismatic joint)
  */
-static Vector3 GUI_SIM_PANEL_JointToDisplay(Vector3 joint_rad_m, bool use_degrees)
+static Vector3 GUI_SIM_PANEL_JointToDisplay(Vector3 joint, bool use_degrees)
 {
-    Vector3 display = joint_rad_m;
+    Vector3 display = joint;
 
-    if (use_degrees) {
+    if (use_degrees)
+    {
         display.x *= RAD2DEG;
         display.y *= RAD2DEG;
-        // display.z stays meters
     }
 
     return display;
@@ -106,26 +115,61 @@ static Vector3 GUI_SIM_PANEL_JointToDisplay(Vector3 joint_rad_m, bool use_degree
  */
 static Vector3 GUI_SIM_PANEL_JointFromDisplay(Vector3 display, bool use_degrees)
 {
-    Vector3 joint_rad_m = display;
+    Vector3 joint = display;
 
-    if (use_degrees) {
-        joint_rad_m.x *= DEG2RAD;
-        joint_rad_m.y *= DEG2RAD;
-        // joint_rad_m.z stays meters
+    if (use_degrees)
+    {
+        joint.x *= DEG2RAD;
+        joint.y *= DEG2RAD;
     }
 
-    return joint_rad_m;
+    return joint;
 }
+
+/**
+ * @brief 
+ * 
+ * @param panel 
+ * @param parent 
+ * @param label 
+ * @param value 
+ * @param y 
+ */
+static void GUI_SIM_PANEL_DrawVector3Row( const GuiSimPanel panel, GuiNodeID parent, const char* label, Vector3 value, float y)
+{
+    Vector2 label_pos = GuiNode_LocalToScreen( panel->layout, parent, (Vector2){ 0.0f, y });
+
+    DrawText( label, (int)label_pos.x, (int)label_pos.y, 16, DARKGRAY );
+
+    const float value_start = 165.0f;
+    const float spacing = 75.0f;
+
+    for (int i = 0; i < 3; i++)
+    {
+        float value_component;
+
+        switch (i)
+        {
+            case 0: value_component = value.x; break;
+            case 1: value_component = value.y; break;
+            default: value_component = value.z; break;
+        }
+
+        Vector2 value_pos = GuiNode_LocalToScreen( panel->layout, parent, (Vector2) { value_start + spacing * (float)i, y } );
+
+        DrawText( TextFormat( "%*.*f", FIELD_WIDTH, PRECISION, value_component ), (int)value_pos.x, (int)value_pos.y, 16, DARKGRAY );
+    }
+}
+
 
 /**
  * @brief Synchronizes the target text fields with the current joint position target
  * @param panel Pointer to the GuiSimPanel instance
  */
-static void GUI_SIM_PANEL_SyncTargetJointText(GuiSimPanel* panel)
+static void GUI_SIM_PANEL_SyncTargetJointText(const GuiSimPanel panel)
 {
     // Convert the commanded joint position to display units for text representation
-    Vector3 display_target =
-        GUI_SIM_PANEL_JointToDisplay(panel->CommandedState.joint_position, panel->use_degrees);
+    Vector3 display_target = GUI_SIM_PANEL_JointToDisplay(panel->CommandedState.joint_position, panel->use_degrees);
 
     // Update the text fields with the display values
     snprintf(panel->joint_target_text[0], GUI_SIM_FIELD_TEXT_SIZE, "%.*f", PRECISION, display_target.x);
@@ -137,7 +181,7 @@ static void GUI_SIM_PANEL_SyncTargetJointText(GuiSimPanel* panel)
  * @brief Synchronizes the target text fields with the current joint position target
  * @param panel Pointer to the GuiSimPanel instance
  */
-static void GUI_SIM_PANEL_SyncTargetTCPText(GuiSimPanel* panel)
+static void GUI_SIM_PANEL_SyncTargetTCPText(const GuiSimPanel panel)
 {
     // Convert the commanded joint position to display units for text representation
     Vector3 display_target = panel->CommandedState.tcp_position;
@@ -154,7 +198,7 @@ static void GUI_SIM_PANEL_SyncTargetTCPText(GuiSimPanel* panel)
  * @brief Clears the focus from all target text boxes
  * @param panel Pointer to the GuiSimPanel instance
  */
-static void GUI_SIM_PANEL_ClearJointTargetTextBoxFocus(GuiSimPanel* panel)
+static void GUI_SIM_PANEL_ClearJointTargetTextBoxFocus(GuiSimPanel panel)
 {
     panel->joint_target_edit[0] = false;
     panel->joint_target_edit[1] = false;
@@ -165,7 +209,7 @@ static void GUI_SIM_PANEL_ClearJointTargetTextBoxFocus(GuiSimPanel* panel)
  * @brief Clears the focus from all target text boxes
  * @param panel Pointer to the GuiSimPanel instance
  */
-static void GUI_SIM_PANEL_ClearTCPTargetTextBoxFocus(GuiSimPanel* panel)
+static void GUI_SIM_PANEL_ClearTCPTargetTextBoxFocus(GuiSimPanel panel)
 {
     panel->TCP_target_edit[0] = false;
     panel->TCP_target_edit[1] = false;
@@ -176,93 +220,67 @@ static void GUI_SIM_PANEL_ClearTCPTargetTextBoxFocus(GuiSimPanel* panel)
  * @brief Parses the target text values and updates the joint position target
  * @param panel Pointer to the GuiSimPanel instance
  */
-static void GUI_SIM_PANEL_ParseTargetJointText(GuiSimPanel* panel)
+static void GUI_SIM_PANEL_ParseTargetJointText( GuiSimPanel panel)
 {
-    // If parsing fails for any field, fallback to the current commanded joint position for that field
-    Vector3 fallback_display =
-        GUI_SIM_PANEL_JointToDisplay(panel->CommandedState.joint_position, panel->use_degrees);
+    Vector3 fallback = GUI_SIM_PANEL_JointToDisplay( panel->CommandedState.joint_position, panel->use_degrees );
 
-    Vector3 display_target;
+    Vector3 target;
 
-    // Parse each field with fallback
-    // For joint 1, if parsing fails, fallback to the current commanded joint position for joint 1
-    display_target.x =
-        GUI_SIM_PANEL_ParseFloat(panel->joint_target_text[0], fallback_display.x);
+    target.x = GUI_SIM_PANEL_ParseFloat( panel->joint_target_text[0], fallback.x );
 
-    // For joint 2, if parsing fails, fallback to the current commanded joint position for joint 2
-    display_target.y =
-        GUI_SIM_PANEL_ParseFloat(panel->joint_target_text[1], fallback_display.y);
+    target.y = GUI_SIM_PANEL_ParseFloat( panel->joint_target_text[1], fallback.y );
 
-    // For joint 3, if parsing fails, fallback to the current commanded joint position for joint 3
-    display_target.z =
-        GUI_SIM_PANEL_ParseFloat(panel->joint_target_text[2], fallback_display.z);
+    target.z = GUI_SIM_PANEL_ParseFloat( panel->joint_target_text[2], fallback.z );
 
-    // Update the commanded joint position target based on the parsed display values
-    panel->CommandedState.joint_position =
-        GUI_SIM_PANEL_JointFromDisplay(display_target, panel->use_degrees);
+    panel->CommandedState.joint_position = GUI_SIM_PANEL_JointFromDisplay( target, panel->use_degrees );
 }
 
 /**
  * @brief Parses the target text values and updates the TCP target
  * @param panel Pointer to the GuiSimPanel instance
  */
-static void GUI_SIM_PANEL_ParseTargetTCPText(GuiSimPanel* panel)
+static void GUI_SIM_PANEL_ParseTargetTCPText(GuiSimPanel panel)
 {
-    // If parsing fails for any field, fallback to the current commanded joint position for that field
-    Vector3 fallback_display = panel->CommandedState.tcp_position;
+    Vector3 fallback = panel->CommandedState.tcp_position;
 
-    Vector3 display_target;
+    Vector3 target;
 
-    // Parse each field with fallback
-    // For joint 1, if parsing fails, fallback to the current commanded joint position for joint 1
-    display_target.x =
-        GUI_SIM_PANEL_ParseFloat(panel->TCP_target_text[0], fallback_display.x);
+    target.x = GUI_SIM_PANEL_ParseFloat( panel->TCP_target_text[0], fallback.x);
 
-    // For joint 2, if parsing fails, fallback to the current commanded joint position for joint 2
-    display_target.y =
-        GUI_SIM_PANEL_ParseFloat(panel->TCP_target_text[1], fallback_display.y);
+    target.y = GUI_SIM_PANEL_ParseFloat( panel->TCP_target_text[1], fallback.y );
 
-    // For joint 3, if parsing fails, fallback to the current commanded joint position for joint 3
-    display_target.z =
-        GUI_SIM_PANEL_ParseFloat(panel->TCP_target_text[2], fallback_display.z);
+    target.z = GUI_SIM_PANEL_ParseFloat( panel->TCP_target_text[2], fallback.z );
 
-    // Update the commanded joint position target based on the parsed display values
-    panel->CommandedState.tcp_position =display_target; 
+    panel->CommandedState.tcp_position = target;
 }
 
+
+
+
 /**
- * @brief Draws the joint target editor
- * @param panel Pointer to the GuiSimPanel instance
- * @param posY The y-coordinate of the top-left corner of the joint target editor
+ * @brief 
+ * 
+ * @param panel 
  */
-static void GUI_SIM_PANEL_DrawJointTargetEditor(GuiSimPanel* panel, int posY)
+static void GUI_SIM_PANEL_DrawJointEditor( GuiSimPanel panel )
 {
+    static const char* labels[3] = { "J1", "J2", "J3" };
 
-    int paddingY = 20;
+    for (int i = 0; i < GUI_SIM_AXIS_COUNT; i++)
+    {
+        Rectangle box = GuiNode_GetRect( panel->layout, panel->joint_fields[i] );
 
-    DrawText("J1", 25, posY, 16, DARKGRAY);
-    DrawText("J2", 125, posY, 16, DARKGRAY);
-    DrawText("J3", 225, posY, 16, DARKGRAY);
+        DrawText( labels[i], (int)box.x, (int)box.y - 20, 16, DARKGRAY );
 
-    for (int i = 0; i < 3; i++) {
-        Rectangle box = {
-            25.0f + (float)i * 100.0f,
-            (float)posY + paddingY,
-            80.0f,
-            25.0f
-        };
-
-        if (GuiTextBox(
-            box,
-            panel->joint_target_text[i],
-            GUI_SIM_FIELD_TEXT_SIZE,
-            panel->joint_target_edit[i]
-        )) {
+        if (GuiTextBox( box, panel->joint_target_text[i], GUI_SIM_FIELD_TEXT_SIZE, panel->joint_target_edit[i]))
+        {
             panel->joint_target_edit[i] = !panel->joint_target_edit[i];
 
-            if (panel->joint_target_edit[i]) {
-                for (int j = 0; j < 3; j++) {
-                    if (j != i) {
+            if (panel->joint_target_edit[i])
+            {
+                for (int j = 0; j < GUI_SIM_AXIS_COUNT; j++)
+                {
+                    if (j != i){
                         panel->joint_target_edit[j] = false;
                     }
                 }
@@ -272,37 +290,29 @@ static void GUI_SIM_PANEL_DrawJointTargetEditor(GuiSimPanel* panel, int posY)
 }
 
 /**
- * @brief Draws the joint target editor
- * @param panel Pointer to the GuiSimPanel instance
- * @param posY The y-coordinate of the top-left corner of the TCP target editor
+ * @brief 
+ * 
+ * @param panel 
  */
-static void GUI_SIM_PANEL_DrawTCPTargetEditor(GuiSimPanel* panel, int posY)
+static void GUI_SIM_PANEL_DrawTCPEditor( GuiSimPanel panel)
 {
-    int paddingY = 20;
+    static const char* labels[3] = { "TCP X", "TCP Y", "TCP Z"};
 
-    DrawText("TCP X", 25, posY, 16, DARKGRAY);
-    DrawText("TCP Y", 125, posY, 16, DARKGRAY);
-    DrawText("TCP Z", 225, posY, 16, DARKGRAY);
+    for (int i = 0; i < GUI_SIM_AXIS_COUNT; i++)
+    {
+        Rectangle box = GuiNode_GetRect( panel->layout, panel->tcp_fields[i]);
 
-    for (int i = 0; i < 3; i++) {
-        Rectangle box = {
-            25.0f + (float)i * 100.0f,
-            (float)posY + paddingY,
-            80.0f,
-            25.0f
-        };
+        DrawText( labels[i], (int)box.x, (int)box.y - 20, 16, DARKGRAY );
 
-        if (GuiTextBox(
-            box,
-            panel->TCP_target_text[i],
-            GUI_SIM_FIELD_TEXT_SIZE,
-            panel->TCP_target_edit[i]
-        )) {
+        if (GuiTextBox( box, panel->TCP_target_text[i], GUI_SIM_FIELD_TEXT_SIZE, panel->TCP_target_edit[i]))
+        {
             panel->TCP_target_edit[i] = !panel->TCP_target_edit[i];
 
-            if (panel->TCP_target_edit[i]) {
-                for (int j = 0; j < 3; j++) {
-                    if (j != i) {
+            if (panel->TCP_target_edit[i])
+            {
+                for (int j = 0; j < GUI_SIM_AXIS_COUNT; j++)
+                {
+                    if (j != i){
                         panel->TCP_target_edit[j] = false;
                     }
                 }
@@ -311,164 +321,326 @@ static void GUI_SIM_PANEL_DrawTCPTargetEditor(GuiSimPanel* panel, int posY)
     }
 }
 
-void GUI_SIM_PANEL_Init(GuiSimPanel* panel, Robot robot)
+static void GUI_SIM_PANEL_CreateLayout( GuiSimPanel panel, const Rectangle* panel_rect )
 {
-    if (!panel) {
-        RAISE(NullptrError);
-        return;
+    /*
+     * Root
+     */
+    panel->layout = GuiLayout_Create(panel_rect);
+
+    panel->root = GuiLayout_GetRoot(panel->layout);
+
+    GuiNode_SetPadding( panel->layout, panel->root, 0.0f );
+
+    /**
+     * all eft side GUI
+     */
+    Rectangle Robot_report_rect = { 0.0f, 0.0f, 400.0f, 400.0f};
+
+    panel->Robot_report = GuiLayout_CreateNode( panel->layout, panel->root, &Robot_report_rect );
+
+    GuiNode_SetPadding(panel->layout, panel->Robot_report, 15.00f);
+
+    /*
+     * Robot state section
+     */
+    Rectangle state_rect = { 0.0f, 0.0f, 400.0f, 100.0f};
+
+    panel->state_section = GuiLayout_CreateNode( panel->layout, panel->Robot_report, &state_rect );
+
+    /*
+     * Units toggle
+     */
+    Rectangle units_rect = { 0.0f, 100.0f, 75.0f, 25.0f};
+
+    panel->units_toggle = GuiLayout_CreateNode( panel->layout, panel->Robot_report, &units_rect );
+
+    /*
+     * Joint target section
+     */
+    Rectangle joint_rect = { 0.0f, 135.0f, 400.0f, 110.0f };
+
+    panel->joint_section = GuiLayout_CreateNode( panel->layout, panel->Robot_report, &joint_rect );
+
+    GuiNode_SetPadding( panel->layout, panel->joint_section, 10.0f );
+
+
+    /*
+     * Joint input boxes
+     */
+    for (int i = 0; i < GUI_SIM_AXIS_COUNT; i++)
+    {
+        // each
+        Rectangle field_rect = { (float)i * 100.0f,  30.0f, 80.0f, 25.0f};
+
+        panel->joint_fields[i] = GuiLayout_CreateNode( panel->layout, panel->joint_section, &field_rect );
     }
 
-    if (!robot) {
-        RAISE(NullptrError);
-        return;
+
+    /*
+     * Joint command button
+     */
+    Rectangle joint_button_rect = { 0.0f, 65.0f, 330.0f, 30.0f };
+
+    panel->joint_button = GuiLayout_CreateNode( panel->layout, panel->joint_section, &joint_button_rect );
+
+
+    /*
+     * TCP target section
+     */
+    Rectangle tcp_rect = {0.0f, 250.0f, 400.0f, 110.0f };
+
+    panel->tcp_section = GuiLayout_CreateNode( panel->layout, panel->Robot_report, &tcp_rect);
+
+    GuiNode_SetPadding(panel->layout, panel->tcp_section, 10.0f );
+
+
+    /*
+     * TCP input boxes
+     */
+    for (int i = 0; i < GUI_SIM_AXIS_COUNT; i++)
+    {
+        Rectangle field_rect = { (float)i * 100.0f, 30.0f, 80.0f, 25.0f };
+
+        panel->tcp_fields[i] = GuiLayout_CreateNode( panel->layout,  panel->tcp_section, &field_rect );
     }
 
-    memset(panel, 0, sizeof(GuiSimPanel));
 
-    ROBOT_GetState(robot, &panel->State);
+    /*
+     * TCP command button
+     */
+    Rectangle tcp_button_rect = { 0.0f, 65.0f, 330.0f, 30.0f };
 
-    panel->CommandedState.joint_position = panel->State.joint_position;
-    panel->use_degrees = true;
-
-    GUI_SIM_PANEL_SyncTargetJointText(panel);
-
-    GUI_SIM_PANEL_SyncTargetTCPText(panel);
+    panel->tcp_button = GuiLayout_CreateNode( panel->layout, panel->tcp_section, &tcp_button_rect );
 }
 
-void GUI_SIM_PANEL_Draw(GuiSimPanel* panel)
+GuiSimPanel GUI_SIM_PANEL_Init(Robot robot, Rectangle* rect)
 {
-    if (!panel) {
+
+
+    assert(robot);
+    assert(rect);
+    
+    GuiSimPanel panel;
+
+    TRY
+    {
+        NEW0(panel);
+    }
+    EXCEPT(Mem_Failed)
+    {
+        LOG_ERROR_MSG(GUI_Failed_ErrorCode, "Memory allocation failed for GUI");
+        RAISE(GUI_Failed);
+        return NULL;
+
+    } END_TRY;
+
+    ROBOT_GetState( robot, &panel->State );
+
+    panel->CommandedState = panel->State;
+
+    panel->use_degrees = true;
+    GUI_SIM_PANEL_CreateLayout(panel, rect );
+    GUI_SIM_PANEL_SyncTargetJointText(panel);
+    GUI_SIM_PANEL_SyncTargetTCPText(panel);
+
+    return panel;
+}
+
+void GUI_SIM_PANEL_Draw( GuiSimPanel panel )
+{
+    if (!panel)
+    {
         RAISE(NullptrError);
         return;
     }
 
-    Rectangle panel_rect = { 10, 10, 430, 430 };
 
-    // Draw panel background
-    DrawRectangleRec(panel_rect, LIGHTGRAY);
+    /* --------------------------------------------------------
+     * Panel
+     * -------------------------------------------------------- */
 
-    // Draw panel border and title
-    GuiGroupBox(panel_rect, "Robot State");
+    Rectangle panel_rect = GuiNode_GetRect( panel->layout, panel->Robot_report );
 
-    // Toggle for degrees/radians
+    DrawRectangleRec( panel_rect, LIGHTGRAY );
+
+    GuiGroupBox( panel_rect, "Robot State" );
+
+
+    /* --------------------------------------------------------
+     * Degrees / radians
+     * -------------------------------------------------------- */
+
     bool old_use_degrees = panel->use_degrees;
 
-    GuiToggle(
-        (Rectangle){ 25, 30, 110, 25 },
-        panel->use_degrees ? "Degrees" : "Radians",
-        &panel->use_degrees
-    );
+    Rectangle toggle_rect =  GuiNode_GetRect( panel->layout, panel->units_toggle );
 
-    if (old_use_degrees != panel->use_degrees) {
+    GuiToggle( toggle_rect, panel->use_degrees ? "Degrees" : "Radians", &panel->use_degrees );
+
+    if (old_use_degrees != panel->use_degrees)
+    {
         GUI_SIM_PANEL_ParseTargetJointText(panel);
+
         GUI_SIM_PANEL_ClearJointTargetTextBoxFocus(panel);
+
         GUI_SIM_PANEL_SyncTargetJointText(panel);
     }
 
-    // Display robot state
-    GUI_SIM_PANEL_DrawVector3Row("TCP Position (mm):",   panel->State.tcp_position,   70);
-    GUI_SIM_PANEL_DrawVector3Row("TCP Velocity (mm/s):", panel->State.tcp_velocity,   95);
 
-    // Convert joint positions and velocities to display units based on the current use_degrees setting
-    Vector3 joint_position_display =
-        GUI_SIM_PANEL_JointToDisplay(panel->State.joint_position, panel->use_degrees);
+    /* --------------------------------------------------------
+     * Current state
+     * -------------------------------------------------------- */
 
-    // For joint velocities, if use_degrees is true, convert from radians/s to degrees/s for revolute joints, but keep prismatic joint velocity in mm/s
-    Vector3 joint_velocity_display =
-        GUI_SIM_PANEL_JointToDisplay(panel->State.joint_velocity, panel->use_degrees);
+    Vector3 joint_position = GUI_SIM_PANEL_JointToDisplay( panel->State.joint_position, panel->use_degrees );
 
-    // Display joint positions and velocities with appropriate units based on the use_degrees setting
-    if (panel->use_degrees) {
-        GUI_SIM_PANEL_DrawVector3Row("Joint Pos deg:",   joint_position_display, 120);
-        GUI_SIM_PANEL_DrawVector3Row("Joint Vel deg/s:", joint_velocity_display, 145);
-    } else {
-        GUI_SIM_PANEL_DrawVector3Row("Joint Pos rad:",   joint_position_display, 120);
-        GUI_SIM_PANEL_DrawVector3Row("Joint Vel rad/s:", joint_velocity_display, 145);
-    }
-    
-    // Draw joint position target editor
-    GuiLine((Rectangle){ 25, 170, 330, 10 }, "Joint Position Targeting");
+    Vector3 joint_velocity = GUI_SIM_PANEL_JointToDisplay( panel->State.joint_velocity, panel->use_degrees );
 
-    // Draw the joint target editor fields
-    GUI_SIM_PANEL_DrawJointTargetEditor(panel, 200);
+    GUI_SIM_PANEL_DrawVector3Row( panel, panel->state_section, "TCP Pos:", panel->State.tcp_position, 0.0f );
 
-    // Draw the "Set Joint Position Target" button and handle its click event
-    if (GuiButton((Rectangle){ 25, 265, 330, 30 }, "Set Joint Position Target")) {
+    GUI_SIM_PANEL_DrawVector3Row( panel, panel->state_section, "TCP Vel:", panel->State.tcp_velocity, 25.0f );
+
+    GUI_SIM_PANEL_DrawVector3Row( panel,  panel->state_section, panel->use_degrees ? "Joint Pos deg:" : "Joint Pos rad:", joint_position,50.0f );
+
+    GUI_SIM_PANEL_DrawVector3Row( panel, panel->state_section, panel->use_degrees ? "Joint Vel deg/s:" : "Joint Vel rad/s:", joint_velocity, 75.0f );
+
+
+    /* --------------------------------------------------------
+     * Joint position targeting
+     * -------------------------------------------------------- */
+
+    Rectangle joint_section = GuiNode_GetRect( panel->layout, panel->joint_section );
+
+    GuiLine((Rectangle){ joint_section.x, joint_section.y, 330.0f, 10.0f}, "Joint Position Targeting" );
+
+    GUI_SIM_PANEL_DrawJointEditor(panel);
+
+    if (GuiButton( GuiNode_GetRect( panel->layout, panel->joint_button), "Set Joint Position Target" ))
+    {
         GUI_SIM_PANEL_ParseTargetJointText(panel);
+
         GUI_SIM_PANEL_ClearJointTargetTextBoxFocus(panel);
+
         GUI_SIM_PANEL_SyncTargetJointText(panel);
 
         panel->apply_joint_target_requested = true;
     }
 
-    GuiLine((Rectangle){ 25, 2300, 330, 10 }, "TCP Position Targeting"); // Separator line at the bottom of the panel
 
-    GUI_SIM_PANEL_DrawTCPTargetEditor(panel, 325);
+    /* --------------------------------------------------------
+     * TCP position targeting
+     * -------------------------------------------------------- */
 
-    // Draw the "Set TCP Position Target" button and handle its click event
-    if (GuiButton((Rectangle){ 25, 390, 330, 30 }, "Set TCP Position Target")) {
+    Rectangle tcp_section = GuiNode_GetRect( panel->layout, panel->tcp_section );
+
+    GuiLine((Rectangle) { tcp_section.x, tcp_section.y, 330.0f, 10.0f }, "TCP Position Targeting" );
+
+    GUI_SIM_PANEL_DrawTCPEditor(panel);
+
+    if (GuiButton( GuiNode_GetRect( panel->layout, panel->tcp_button ), "Set TCP Position Target" ))
+    {
         GUI_SIM_PANEL_ParseTargetTCPText(panel);
+
         GUI_SIM_PANEL_ClearTCPTargetTextBoxFocus(panel);
+
         GUI_SIM_PANEL_SyncTargetTCPText(panel);
 
         panel->TCP_joint_target_requested = true;
     }
+}
 
+void GUI_SIM_PANEL_Destroy( GuiSimPanel panel )
+{
+    assert(panel);
 
+    GuiLayout_Destroy( &panel->layout );
+
+    FREE(panel);
 
 }
 
-void GUI_SIM_PANEL_Update(GuiSimPanel* panel, Robot robot)
+
+void GUI_SIM_PANEL_Update( GuiSimPanel panel, Robot robot )
 {
-    if (!panel) {
+    if (!panel)
+    {
         RAISE(NullptrError);
         return;
     }
 
-    if (!robot) {
+    if (!robot)
+    {
         RAISE(NullptrError);
         return;
     }
 
-    ROBOT_GetState(robot, &panel->State);
 
-    if (panel->apply_joint_target_requested) {
-        LOG_MESSAGE("Joint Target Requested\n");
-        LOG_MESSAGE("Joint target: %.3f, %.3f, %.3f\n",
+    /*
+     * Update current robot state.
+     */
+    ROBOT_GetState( robot, &panel->State);
+
+
+    /*
+     * Joint command.
+     */
+    if (panel->apply_joint_target_requested)
+    {
+        LOG_MESSAGE(
+            "Joint target: %.3f, %.3f, %.3f\n",
             panel->CommandedState.joint_position.x,
             panel->CommandedState.joint_position.y,
             panel->CommandedState.joint_position.z
         );
 
-        RobotCommandStatus status = ROBOT_SetJointPositionTarget(robot, panel->CommandedState.joint_position);
+        RobotCommandStatus status = ROBOT_SetJointPositionTarget( robot, panel->CommandedState.joint_position );
 
-        if (status == ROBOT_COMMAND_REJECTED) {
-            LOG_ERROR_MSG(JP_CMD_REJECTED_ErrorCode, "Joint position target command was rejected. Target may be out of bounds.\n");
+        if (status == ROBOT_COMMAND_REJECTED)
+        {
+            LOG_ERROR_MSG(
+                JP_CMD_REJECTED_ErrorCode,
+                "Joint position target command rejected.\n"
+            );
         }
-        else if (status == ROBOT_COMMAND_CLAMPED) {
-            LOG_WARN_MSG(JP_CMD_CLAMPED_ErrorCode, "Joint position target command was clamped. Target is near bounds.\n");
+        else if (status == ROBOT_COMMAND_CLAMPED)
+        {
+            LOG_WARN_MSG(
+                JP_CMD_CLAMPED_ErrorCode,
+                "Joint position target command clamped.\n"
+            );
         }
 
-    
         panel->apply_joint_target_requested = false;
     }
 
-    if (panel->TCP_joint_target_requested) {
 
-        LOG_MESSAGE("TCP Target Requested\n");
-        LOG_MESSAGE("TCP target: %.3f, %.3f, %.3f\n",
+    /*
+     * TCP command.
+     */
+    if (panel->TCP_joint_target_requested)
+    {
+        LOG_MESSAGE(
+            "TCP target: %.3f, %.3f, %.3f\n",
             panel->CommandedState.tcp_position.x,
             panel->CommandedState.tcp_position.y,
             panel->CommandedState.tcp_position.z
         );
 
-        RobotCommandStatus status = ROBOT_SetTCPPositionTarget(robot, panel->CommandedState.tcp_position);
+        RobotCommandStatus status = ROBOT_SetTCPPositionTarget( robot, panel->CommandedState.tcp_position
+            );
 
-        if (status == ROBOT_COMMAND_REJECTED) {
-            LOG_ERROR_MSG(TCP_CMD_REJECTED_ErrorCode, "TCP position target command was rejected. Target may be out of bounds.\n");
+        if (status == ROBOT_COMMAND_REJECTED)
+        {
+            LOG_ERROR_MSG(
+                TCP_CMD_REJECTED_ErrorCode,
+                "TCP position target command rejected.\n"
+            );
         }
-        else if (status == ROBOT_COMMAND_CLAMPED) {
-            LOG_WARN_MSG(TCP_CMD_CLAMPED_ErrorCode, "TCP position target command was clamped. Target is near bounds.\n");
+        else if (status == ROBOT_COMMAND_CLAMPED)
+        {
+            LOG_WARN_MSG(
+                TCP_CMD_CLAMPED_ErrorCode,
+                "TCP position target command clamped.\n"
+            );
         }
 
         panel->TCP_joint_target_requested = false;

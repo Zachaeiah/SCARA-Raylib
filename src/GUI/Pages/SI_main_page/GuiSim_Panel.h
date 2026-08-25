@@ -1,50 +1,63 @@
-// GuiSimPanel.h
 #ifndef GUI_SIM_PANEL_H_
 #define GUI_SIM_PANEL_H_
 
 #include "raylib.h"
 
+#include "GUI/Layout/gui_layout.h"
 #include "Robot/Robot/robot.h"
 #include "Robot/Robot/robot_comand.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define GUI_SIM_FIELD_TEXT_SIZE 32
+#define GUI_SIM_AXIS_COUNT      3
 
-typedef struct GuiSimPanel {
-    RobotState State;
-    RobotState CommandedState;
+#define GSP GuiSimPanel
+typedef struct GSP *GSP;
 
-    char joint_target_text[3][GUI_SIM_FIELD_TEXT_SIZE];
-    char TCP_target_text[3][GUI_SIM_FIELD_TEXT_SIZE];
-    bool joint_target_edit[3];
-    bool TCP_target_edit[3];
-
-    bool use_degrees;
-    bool has_command_message;
-    bool apply_joint_target_requested;
-    bool TCP_joint_target_requested;
-} GuiSimPanel;
+extern const Except_t GUI_Failed;
+extern const ErrorType GUI_Failed_ErrorCode;
 
 /**
- * @brief Initializes the simulation panel
- * 
- * @param self pointer to the GuiSimPanel instance to initialize
- * @param robot pointer to the Robot instance
+ * @brief Initialize the simulation panel.
+ *
+ * @param self Panel instance.
+ * @param robot Robot instance.
+ * @param rect Panel position and size.
  */
-extern void GUI_SIM_PANEL_Init(GuiSimPanel* self, Robot robot);
+GSP GUI_SIM_PANEL_Init(Robot robot, Rectangle* rect );
+
 
 /**
- * @brief Draws the simulation panel
- * 
- * @param self pointer to the GuiSimPanel instance to draw
+ * @brief Destroy resources owned by the panel.
+ *
+ * @param self Panel instance.
  */
-extern void GUI_SIM_PANEL_Draw(GuiSimPanel* self);
+void GUI_SIM_PANEL_Destroy(GSP self);
+
 
 /**
- * @brief Updates the simulation panel
- * 
- * @param self pointer to the GuiSimPanel instance to update
- * @param robot pointer to the Robot instance
+ * @brief Draw the simulation panel.
+ *
+ * @param self Panel instance.
  */
-extern void GUI_SIM_PANEL_Update(GuiSimPanel* self, Robot robot);
+void GUI_SIM_PANEL_Draw(GSP self);
+
+
+/**
+ * @brief Update robot state and process commands.
+ *
+ * @param self Panel instance.
+ * @param robot Robot instance.
+ */
+void GUI_SIM_PANEL_Update(GSP self, Robot robot );
+
+#undef GSP
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #endif
