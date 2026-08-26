@@ -130,6 +130,9 @@ FK_result ROBOT_forward_kinematics(Robot robot, Vector3 target_JP)
 
 IK_result ROBOT_inverse_kinematics(Robot robot, Vector3 target_TCP)
 {
+    assert(robot);
+
+
     LOG_DEBUG_MSG(NO_ERROR, "Calculating IK for target TCP: (%.3f, %.3f, %.3f)\n",
         target_TCP.x,
         target_TCP.y,
@@ -141,11 +144,6 @@ IK_result ROBOT_inverse_kinematics(Robot robot, Vector3 target_TCP)
         .JP = { Vector3Zero(), Vector3Zero() },
         .reachable = { 0, 0 }
     };
-
-    if (!robot ) {
-        RAISE(NullptrError);
-        return result;
-    }
 
     Link link2 = robot->links[ROBOT_LINK_2];
     Link link3 = robot->links[ROBOT_LINK_3];
@@ -172,8 +170,8 @@ IK_result ROBOT_inverse_kinematics(Robot robot, Vector3 target_TCP)
             math_y = TCP.x
     */
     Vector2 target_2d = {
-        .x = target_TCP.z,
-        .y = target_TCP.x
+        .x = target_TCP.x ,
+        .y = -target_TCP.z
     };
 
     const float r = Vector2Length(target_2d);
@@ -379,4 +377,41 @@ JB_result ROBOT_jacobian_velcitys(Robot robot, Vector3 target_TCP_vel){
 
 
     return jb_sol ;
+}
+
+void ROBOT_PRINT_FK(const FK_result *result)
+{
+    assert(result);
+
+    printf(
+        "FK Result:\n"
+        "  TCP:       (%.3f, %.3f, %.3f)\n"
+        "  Reachable: %s\n",
+        result->TCP.x,
+        result->TCP.y,
+        result->TCP.z,
+        result->reachable ? "TRUE" : "FALSE"
+    );
+}
+
+
+void ROBOT_PRINT_IK(const IK_result *result)
+{
+    assert(result);
+
+    printf("IK Result:\n");
+
+    for (int i = 0; i < MAX_SOLUTIONS; i++) {
+
+        printf(
+            "  Solution %d:\n"
+            "    JP:        (%.3f, %.3f, %.3f)\n"
+            "    Reachable: %s\n",
+            i,
+            result->JP[i].x,
+            result->JP[i].y,
+            result->JP[i].z,
+            result->reachable[i] ? "TRUE" : "FALSE"
+        );
+    }
 }

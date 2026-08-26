@@ -10,22 +10,31 @@
 #define RIGHT_SOLUTION 1
 #define MAX_SOLUTIONS 2
 
-typedef struct FK_result{
-    Vector3 TCP; // position of the end effector
-    bool reachable; // flag indicating if the target position is reachable
+/**
+ * @brief Result of a forward kinematics calculation.
+ */
+typedef struct FK_result {
+    Vector3 TCP;       // Calculated TCP position
+    bool reachable;    // True if the position is valid/reachable
 } FK_result;
 
-typedef struct IK_result{
-    Vector3 JP[MAX_SOLUTIONS]; // joint angles to reach the target position (in radians)
-    bool reachable[MAX_SOLUTIONS]; // flag indicating if the target position is reachable
+/**
+ * @brief Result of an inverse kinematics calculation.
+ */
+typedef struct IK_result {
+    Vector3 JP[MAX_SOLUTIONS];       // Joint positions for each IK solution
+    bool reachable[MAX_SOLUTIONS];   // True if the corresponding solution is reachable
 } IK_result;
 
-typedef struct JB_result{
-    Vector3 tcp_velocity; // curent tcp velcity
-    Vector3 joint_velocity; // tartget joint velcity
-    bool reachable;
-    bool singularity;
-}JB_result;
+/**
+ * @brief Result of a Jacobian velocity calculation.
+ */
+typedef struct JB_result {
+    Vector3 tcp_velocity;     // TCP velocity
+    Vector3 joint_velocity;   // Corresponding joint velocity
+    bool reachable;           // True if the velocity can be achieved
+    bool singularity;         // True if the robot is at or near a singularity
+} JB_result;
 
 /**
  * @brief Computes the forward kinematics for the robot given the joint angles.
@@ -51,6 +60,22 @@ extern IK_result ROBOT_inverse_kinematics(Robot robot, Vector3 target_TCP);
  * @return JB_result 
  */
 extern JB_result ROBOT_jacobian_velcitys(Robot robot, Vector3 target_TCP_vel);
+
+/**
+ * @brief Prints the result of a forward kinematics calculation.
+ *
+ * @param result Pointer to the FK_result to print.
+ */
+extern void ROBOT_PRINT_FK(const FK_result *result);
+
+/**
+ * @brief Prints the result of an inverse kinematics calculation.
+ *
+ * Prints all available IK solutions and their reachability.
+ *
+ * @param result Pointer to the IK_result to print.
+ */
+extern void ROBOT_PRINT_IK(const IK_result *result);
 
 
 
