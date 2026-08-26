@@ -59,6 +59,18 @@ void Array_free(Array_T *array)
 	FREE(*array);
 }
 
+int Array_length(Array_T array) 
+{
+	assert(array);
+	return array->length;
+}
+
+int Array_size(Array_T array) {
+	assert(array);
+	return array->size;
+}
+
+
 void *Array_get(Array_T array, int i) 
 {
 	assert(array);
@@ -77,16 +89,48 @@ void *Array_put(Array_T array, int i, void *elem)
 	return elem;
 }
 
-int Array_length(Array_T array) 
+void *Array_iterate(Array_T array, int direction)
 {
-	assert(array);
-	return array->length;
+    static Array_T currentArray = NULL;
+    static int index = 0;
+    static int currentDirection = 0;
+
+    /* Reset iterator */
+    if (array == NULL)
+    {
+        currentArray = NULL;
+        index = 0;
+        currentDirection = 0;
+        return NULL;
+    }
+
+    if (array != currentArray || direction != currentDirection)
+    {
+        currentArray = array;
+        currentDirection = direction;
+
+        if (direction == 0)
+            index = 0;
+        else
+            index = Array_length(array) - 1;
+    }
+
+    /* Left -> Right */
+    if (direction == 0)
+    {
+        if (index >= Array_length(array))
+            return NULL;
+
+        return Array_get(array, index++);
+    }
+
+    /* Right -> Left */
+    if (index < 0)
+        return NULL;
+
+    return Array_get(array, index--);
 }
 
-int Array_size(Array_T array) {
-	assert(array);
-	return array->size;
-}
 
 void Array_resize(Array_T array, int length) 
 {
@@ -121,4 +165,30 @@ Array_T Array_copy(Array_T array, int length)
 		memcpy(copy->array, array->array, copy->length*array->size);
 
 	return copy;
+}
+
+void Array_apply(Array_T array, ArrayApplyFunc func)
+{
+    assert(array);
+    assert(func);
+
+    int length = Array_length(array);
+
+    for (int i = 0; i < length; i++)
+    {
+        func(Array_get(array, i));
+    }
+}
+
+void Array_applyContext(Array_T array, ArrayApplyContextFunc func, void *context)
+{
+    assert(array);
+    assert(func);
+
+    int length = Array_length(array);
+
+    for (int i = 0; i < length; i++)
+    {
+        func(Array_get(array, i), context);
+    }
 }

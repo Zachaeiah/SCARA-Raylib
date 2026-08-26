@@ -9,6 +9,14 @@ extern "C" {
 #define T Array_T
 typedef struct T *T;
 
+/**
+ * @brief Function applied to each element in an Array_T.
+ *
+ * @param elem Pointer to the current element.
+ */
+typedef void (*ArrayApplyFunc)(void *elem);
+typedef void (*ArrayApplyContextFunc)(void *elem, void *context);
+
 extern const Except_t ARRAY_Failed;
 extern const ErrorType ARRAY_Failed_ErrorCode;
 
@@ -64,6 +72,17 @@ extern void *Array_get(T array, int i);
 extern void *Array_put(T array, int i, void *elem);
 
 /**
+ * @brief Iterates through an array from left-to-right or right-to-left.
+ *
+ *
+ * @param array Array to iterate through. Pass NULL to reset.
+ * @param direction Direction to iterate. 0: left-to-right, 1 right-to-left.
+ *
+ * @return Pointer to the next element, or NULL when the end is reached.
+ */
+extern void *Array_iterate(T array, int direction);
+
+/**
  * @brief Resize the dynamic array to the specified length. If the new length is greater than the current length, new elements are uninitialized. If the new length is less than the current length, elements beyond the new length are discarded.
  * 
  * @param array The dynamic array to resize.
@@ -78,7 +97,27 @@ extern void Array_resize(T array, int length);
  * @param length The length of the new array.
  * @return T A new dynamic array containing a copy of the elements from the original array.
  */
-extern T    Array_copy  (T array, int length);
+extern T Array_copy  (T array, int length);
+
+/**
+ * @brief Apply a function to every element in the array.
+ *
+ * The callback receives a pointer to each element, allowing
+ * the element to be modified directly.
+ *
+ * @param array Array to operate on.
+ * @param func Function to apply to each element.
+ */
+extern void Array_apply(T array, ArrayApplyFunc func);
+
+/**
+ * @brief 
+ * 
+ * @param array 
+ * @param func 
+ * @param context 
+ */
+extern void Array_applyContext( T array,ArrayApplyContextFunc func, void *context);
 
 #undef T
 
