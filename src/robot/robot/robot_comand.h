@@ -15,8 +15,7 @@ typedef enum RobotCommandStatus {
  * @param joint_position_limits An array of position limits for each robot joint.
  * @param joint_velocity_limits An array of velocity limits for each robot joint.
  */
-extern void ROBOT_SetJointLimits(
-    Robot self,
+extern void ROBOT_SetJointLimits( Robot self,
     const float joint_position_limits[ROBOT_NUM_JOINTS][ROBOT_NUM_LIMITS],
     const float joint_velocity_limits[ROBOT_NUM_JOINTS][ROBOT_NUM_LIMITS]
 );
