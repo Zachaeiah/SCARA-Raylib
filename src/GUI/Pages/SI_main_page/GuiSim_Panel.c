@@ -4,6 +4,7 @@
 #include "utils/Exceptions_Assertions/except.h"
 #include "utils/MemAllocator/mem.h"
 #include "utils/Logger/logger.h"
+#include "GUI/ploting/XY_plot/xy_plot.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,7 +49,11 @@ struct GuiSimPanel
 
     GuiNodeID root;
     
-    GuiNodeID Robot_report;
+    GuiNodeID L_Robot_report;
+
+    GuiNodeID R_Robot_graphs;
+
+    GuiNodeID Test_graph_section;
 
     GuiNodeID units_toggle;
 
@@ -245,11 +250,15 @@ static void GUI_SIM_PANEL_ParseTargetTCPText(GuiSimPanel panel)
 
     Vector3 target;
 
+    LOG_DEBUG_MSG(NO_ERROR, "Target to parce(X: %10s, Y:%10s, Z: %10s)", panel->TCP_target_text[0], panel->TCP_target_text[1], panel->TCP_target_text[2]);
+
     target.x = GUI_SIM_PANEL_ParseFloat( panel->TCP_target_text[0], fallback.x);
 
     target.y = GUI_SIM_PANEL_ParseFloat( panel->TCP_target_text[1], fallback.y );
 
     target.z = GUI_SIM_PANEL_ParseFloat( panel->TCP_target_text[2], fallback.z );
+
+    LOG_DEBUG_MSG(NO_ERROR, "Parced target(X: %f, Y:%f, Z: %f)", target.x, target.y, target.z);
 
     panel->CommandedState.tcp_position = target;
 }
@@ -330,37 +339,46 @@ static void GUI_SIM_PANEL_CreateLayout( GuiSimPanel panel, const Rectangle* pane
 
     panel->root = GuiLayout_GetRoot(panel->layout);
 
-    GuiNode_SetPadding( panel->layout, panel->root, 0.0f );
+    GuiNode_SetPadding( panel->layout, panel->root, 15.0f );
 
     /**
-     * all eft side GUI
+     * all left side GUI
      */
-    Rectangle Robot_report_rect = { 0.0f, 0.0f, 400.0f, 400.0f};
+    Rectangle Robot_report_rect = { 0.0f, 15.0f, 400.0f, 400.0f};
 
-    panel->Robot_report = GuiLayout_CreateNode( panel->layout, panel->root, &Robot_report_rect );
+    panel->L_Robot_report = GuiLayout_CreateNode( panel->layout, panel->root, &Robot_report_rect );
 
-    GuiNode_SetPadding(panel->layout, panel->Robot_report, 15.00f);
+    GuiNode_SetPadding(panel->layout, panel->L_Robot_report, 15.00f);
+
+    /**
+     * all right side GUI
+     */
+    Rectangle R_Robot_graphs_rect = { 1450.0f, 1.5f, 500.0f, 350.0f};
+
+    panel->R_Robot_graphs = GuiLayout_CreateNode( panel->layout, panel->root, &R_Robot_graphs_rect );
+
+    GuiNode_SetPadding(panel->layout, panel->L_Robot_report, 15.00f);
 
     /*
      * Robot state section
      */
     Rectangle state_rect = { 0.0f, 0.0f, 400.0f, 100.0f};
 
-    panel->state_section = GuiLayout_CreateNode( panel->layout, panel->Robot_report, &state_rect );
+    panel->state_section = GuiLayout_CreateNode( panel->layout, panel->L_Robot_report, &state_rect );
 
     /*
      * Units toggle
      */
     Rectangle units_rect = { 0.0f, 100.0f, 75.0f, 25.0f};
 
-    panel->units_toggle = GuiLayout_CreateNode( panel->layout, panel->Robot_report, &units_rect );
+    panel->units_toggle = GuiLayout_CreateNode( panel->layout, panel->L_Robot_report, &units_rect );
 
     /*
      * Joint target section
      */
     Rectangle joint_rect = { 0.0f, 135.0f, 400.0f, 110.0f };
 
-    panel->joint_section = GuiLayout_CreateNode( panel->layout, panel->Robot_report, &joint_rect );
+    panel->joint_section = GuiLayout_CreateNode( panel->layout, panel->L_Robot_report, &joint_rect );
 
     GuiNode_SetPadding( panel->layout, panel->joint_section, 10.0f );
 
@@ -390,7 +408,7 @@ static void GUI_SIM_PANEL_CreateLayout( GuiSimPanel panel, const Rectangle* pane
      */
     Rectangle tcp_rect = {0.0f, 250.0f, 400.0f, 110.0f };
 
-    panel->tcp_section = GuiLayout_CreateNode( panel->layout, panel->Robot_report, &tcp_rect);
+    panel->tcp_section = GuiLayout_CreateNode( panel->layout, panel->L_Robot_report, &tcp_rect);
 
     GuiNode_SetPadding(panel->layout, panel->tcp_section, 10.0f );
 
@@ -405,13 +423,21 @@ static void GUI_SIM_PANEL_CreateLayout( GuiSimPanel panel, const Rectangle* pane
         panel->tcp_fields[i] = GuiLayout_CreateNode( panel->layout,  panel->tcp_section, &field_rect );
     }
 
-
     /*
      * TCP command button
      */
     Rectangle tcp_button_rect = { 0.0f, 65.0f, 330.0f, 30.0f };
 
     panel->tcp_button = GuiLayout_CreateNode( panel->layout, panel->tcp_section, &tcp_button_rect );
+
+     /*
+     * Graphs test layout
+     */
+
+    Rectangle Test_graph_rect = { 50.0f, 275.0f, 400.0f, 400.0f };
+
+    panel->Test_graph_section =  GuiLayout_CreateNode( panel->layout, panel->R_Robot_graphs, &Test_graph_rect );
+
 }
 
 GuiSimPanel GUI_SIM_PANEL_Init(Robot robot, Rectangle* rect)
@@ -457,14 +483,14 @@ void GUI_SIM_PANEL_Draw( GuiSimPanel panel )
 
 
     /* --------------------------------------------------------
-     * Panel
+     * Left Panel
      * -------------------------------------------------------- */
 
-    Rectangle panel_rect = GuiNode_GetRect( panel->layout, panel->Robot_report );
+    Rectangle L_panel_rect = GuiNode_GetRect( panel->layout, panel->L_Robot_report );
 
-    DrawRectangleRec( panel_rect, LIGHTGRAY );
+    DrawRectangleRec( L_panel_rect, LIGHTGRAY );
 
-    GuiGroupBox( panel_rect, "Robot State" );
+    GuiGroupBox( L_panel_rect, "Robot State" );
 
 
     /* --------------------------------------------------------
@@ -546,6 +572,60 @@ void GUI_SIM_PANEL_Draw( GuiSimPanel panel )
 
         panel->TCP_joint_target_requested = true;
     }
+
+    /* --------------------------------------------------------
+     * right Panel
+     * -------------------------------------------------------- */
+
+    Rectangle R_panel_rect = GuiNode_GetRect( panel->layout, panel->R_Robot_graphs );
+
+    DrawRectangleRec( R_panel_rect, LIGHTGRAY );
+
+    GuiGroupBox( R_panel_rect, "Robot graphs");
+
+
+
+    /* --------------------------------------------------------
+     * Test graohs
+     * -------------------------------------------------------- */
+
+     Rectangle Test_graph_rect = GuiNode_GetRect( panel->layout, panel->Test_graph_section );
+
+    #define PLOT_POINTS 200
+
+    static float phase = 0.0f;
+
+    float x[PLOT_POINTS];
+    float y[PLOT_POINTS];
+
+    size_t count = PLOT_POINTS;
+
+    // Generate sine wave
+    for (size_t i = 0; i < count; i++)
+    {
+        x[i] = ((float)i / (float)(count - 1)) * 2.0f * PI;
+
+        y[i] = sinf(x[i] + phase);
+    }
+
+    // Move phase from 0 -> 2PI
+    phase += 0.03f;
+
+    if (phase >= 2.0f * PI) phase -= 2.0f * PI;
+
+    XYPlot plot = XYPlot_Create( (Rectangle ){ Test_graph_rect.x, Test_graph_rect.y , 400, 250} );
+
+    XYPlot_SetRange( plot, 0.0f, 2.0f * PI, -1.5f, 1.5f );
+
+    XYPlot_SetGrid( plot, PI / 2.0f, 0.5f, 5 );
+
+    XYPlot_SetLabels( plot, "Angle (rad)", "Amplitude" );
+
+    XYPlot_DrawPoint(plot, 2.5f, 0.75f, "Target", BLUE);
+
+    XYPlot_Draw(plot, x, y, count, RED );
+
+
 }
 
 void GUI_SIM_PANEL_Destroy( GuiSimPanel panel )
@@ -625,8 +705,9 @@ void GUI_SIM_PANEL_Update( GuiSimPanel panel, Robot robot )
             panel->CommandedState.tcp_position.z
         );
 
-        RobotCommandStatus status = ROBOT_SetTCPPositionTarget( robot, panel->CommandedState.tcp_position
-            );
+        RobotCommandStatus status = ROBOT_SetTCPPositionTarget( robot, panel->CommandedState.tcp_position);
+
+        
 
         if (status == ROBOT_COMMAND_REJECTED)
         {

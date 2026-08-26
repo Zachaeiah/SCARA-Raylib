@@ -24,13 +24,11 @@ typedef struct PL *PL;
 /**
  * @brief Creates and initializes an XY plot.
  *
- * @param pos Bottom-left corner of the plot.
- * @param width Plot width.
- * @param height Plot height.
+ * @param Rect
  *
  * @return Pointer to the created plot, or NULL on failure.
  */
-PL XYPlot_Create(Vector2 pos, float width, float height);
+PL XYPlot_Create(Rectangle Rect);
 
 
 /**

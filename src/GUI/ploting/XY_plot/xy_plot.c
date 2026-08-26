@@ -8,10 +8,7 @@ const Except_t XYPLOT_Failed = {"XYPlot failed"};
  * 
  */
 struct XYPlot {
-    Vector2 pos;     // Bottom-left corner of graph
-
-    float width;
-    float height;
+    Rectangle Plot_space;
 
     float xMin;
     float xMax;
@@ -21,6 +18,8 @@ struct XYPlot {
 
     float xMajor;
     float yMajor;
+
+    Color Pcolor;
 
     int minorDivisions;
 
@@ -38,9 +37,9 @@ struct XYPlot {
  */
 static float MapX(const XYPlot plot, float x)
 {
-    return plot->pos.x +
+    return plot->Plot_space.x +
         ((x - plot->xMin) / (plot->xMax - plot->xMin)) *
-        plot->width;
+        plot->Plot_space.width;
 }
 
 /**
@@ -52,9 +51,9 @@ static float MapX(const XYPlot plot, float x)
  */
 static float MapY(const XYPlot plot, float y)
 {
-    return plot->pos.y -
+    return plot->Plot_space.y -
         ((y - plot->yMin) / (plot->yMax - plot->yMin)) *
-        plot->height;
+        plot->Plot_space.height;
 }
 
 /**
@@ -79,8 +78,8 @@ static void XYPlot_DrawGrid(const XYPlot plot)
         float px = MapX(plot, x);
 
         DrawLineEx(
-            (Vector2){ px, plot->pos.y },
-            (Vector2){ px, plot->pos.y - plot->height },
+            (Vector2){ px, plot->Plot_space.y },
+            (Vector2){ px, plot->Plot_space.y - plot->Plot_space.height },
             1.0f,
             LIGHTGRAY
         );
@@ -91,10 +90,8 @@ static void XYPlot_DrawGrid(const XYPlot plot)
         float py = MapY(plot, y);
 
         DrawLineEx(
-            (Vector2){ plot->pos.x, py },
-            (Vector2){ plot->pos.x + plot->width, py },
-            1.0f,
-            LIGHTGRAY
+            (Vector2){ plot->Plot_space.x, py },
+            (Vector2){ plot->Plot_space.x + plot->Plot_space.width, py }, 1.0f, LIGHTGRAY
         );
     }
 
@@ -108,15 +105,15 @@ static void XYPlot_DrawGrid(const XYPlot plot)
         float px = MapX(plot, x);
 
         DrawLineEx(
-            (Vector2){ px, plot->pos.y },
-            (Vector2){ px, plot->pos.y - plot->height },
+            (Vector2){ px, plot->Plot_space.y },
+            (Vector2){ px, plot->Plot_space.y - plot->Plot_space.height },
             1.0f,
             GRAY
         );
 
         DrawLineEx(
-            (Vector2){ px, plot->pos.y },
-            (Vector2){ px, plot->pos.y + tickSize },
+            (Vector2){ px, plot->Plot_space.y },
+            (Vector2){ px, plot->Plot_space.y + tickSize },
             2.0f,
             DARKGRAY
         );
@@ -127,7 +124,7 @@ static void XYPlot_DrawGrid(const XYPlot plot)
         DrawText(
             text,
             (int)(px - textWidth / 2),
-            (int)(plot->pos.y + tickSize + 2.0f),
+            (int)(plot->Plot_space.y + tickSize + 2.0f),
             fontSize,
             DARKGRAY
         );
@@ -143,15 +140,15 @@ static void XYPlot_DrawGrid(const XYPlot plot)
         float py = MapY(plot, y);
 
         DrawLineEx(
-            (Vector2){ plot->pos.x, py },
-            (Vector2){ plot->pos.x + plot->width, py },
+            (Vector2){ plot->Plot_space.x, py },
+            (Vector2){ plot->Plot_space.x + plot->Plot_space.width, py },
             1.0f,
             GRAY
         );
 
         DrawLineEx(
-            (Vector2){ plot->pos.x - tickSize, py },
-            (Vector2){ plot->pos.x, py },
+            (Vector2){ plot->Plot_space.x - tickSize, py },
+            (Vector2){ plot->Plot_space.x, py },
             2.0f,
             DARKGRAY
         );
@@ -161,7 +158,7 @@ static void XYPlot_DrawGrid(const XYPlot plot)
 
         DrawText(
             text,
-            (int)(plot->pos.x - tickSize - textWidth - 3.0f),
+            (int)(plot->Plot_space.x - tickSize - textWidth - 3.0f),
             (int)(py - fontSize / 2),
             fontSize,
             DARKGRAY
@@ -180,8 +177,8 @@ static void DrawLabels(const XYPlot plot)
 
         DrawText(
             plot->xLabel,
-            (int)(plot->pos.x + plot->width / 2.0f - width / 2.0f),
-            (int)(plot->pos.y + 25.0f),
+            (int)(plot->Plot_space.x + plot->Plot_space.width / 2.0f - width / 2.0f),
+            (int)(plot->Plot_space.y + 25.0f),
             fontSize,
             DARKGRAY
         );
@@ -199,8 +196,8 @@ static void DrawLabels(const XYPlot plot)
 
         Vector2 pos =
         {
-            plot->pos.x - 40.0f,
-            plot->pos.y - plot->height / 2.0f + size.x / 2.0f
+            plot->Plot_space.x - 40.0f,
+            plot->Plot_space.y - plot->Plot_space.height / 2.0f + size.x / 2.0f
         };
 
         DrawTextPro(
@@ -216,22 +213,19 @@ static void DrawLabels(const XYPlot plot)
     }
 }
 
-XYPlot XYPlot_Create(
-    Vector2 pos,
-    float width,
-    float height)
+XYPlot XYPlot_Create(Rectangle Rect)
 {
     XYPlot plot = NULL;
 
-    if (width <= 0.0f || height <= 0.0f)
+    if (Rect.width <= 0.0f || Rect.height <= 0.0f)
     {
         RAISE(XYPLOT_Failed);
 
         LOG_ERROR_MSG(
             XYPLOT_Failed_ErrorCode,
             "Invalid XYPlot size. Width: %.2f, Height: %.2f\n",
-            width,
-            height
+            Rect.width,
+            Rect.height
         );
 
         return NULL;
@@ -248,10 +242,7 @@ XYPlot XYPlot_Create(
         RAISE(XYPLOT_Failed);
     } END_TRY;
 
-    plot->pos = pos;
-
-    plot->width = width;
-    plot->height = height;
+    plot->Plot_space = Rect;
 
     plot->xMin = 0.0f;
     plot->xMax = 1.0f;
@@ -275,33 +266,21 @@ void XYPlot_Destroy(XYPlot plot)
     FREE(plot);
 }
 
-void XYPlot_SetGrid(
-    XYPlot plot,
-    float xMajor,
-    float yMajor,
-    int minorDivisions)
+void XYPlot_SetGrid(XYPlot plot, float xMajor, float yMajor, int minorDivisions)
 {
     plot->xMajor = xMajor;
     plot->yMajor = yMajor;
     plot->minorDivisions = minorDivisions;
 }
 
-void XYPlot_SetLabels(
-    XYPlot plot,
-    const char* xLabel,
-    const char* yLabel)
+void XYPlot_SetLabels( XYPlot plot, const char* xLabel, const char* yLabel)
 {
     plot->xLabel = xLabel;
     plot->yLabel = yLabel;
 }
 
 
-void XYPlot_SetRange(
-    XYPlot plot,
-    float xMin,
-    float xMax,
-    float yMin,
-    float yMax)
+void XYPlot_SetRange( XYPlot plot, float xMin, float xMax, float yMin, float yMax)
 {
     plot->xMin = xMin;
     plot->xMax = xMax;
@@ -312,44 +291,23 @@ void XYPlot_SetRange(
 
 void XYPlot_DrawPoint(const XYPlot plot, float x, float y, const char* label,  Color color)
 {
-    Vector2 point =
-    {
-        MapX(plot, x),
-        MapY(plot, y)
-    };
+    Vector2 point = { MapX(plot, x), MapY(plot, y)};
 
     // Draw point
-    DrawCircleV(
-        point,
-        5.0f,
-        color
-    );
+    DrawCircleV( point, 5.0f, color );
 
     // Draw outline
-    DrawCircleLines(
-        (int)point.x,
-        (int)point.y,
-        5.0f,
-        DARKGRAY
-    );
+    DrawCircleLines( (int)point.x, (int)point.y, 5.0f, DARKGRAY );
 
     // Draw optional label
     if (label != NULL)
     {
-        DrawText(
-            label,
-            (int)point.x + 8,
-            (int)point.y - 14,
-            12,
-            color
-        );
+        DrawText( label, (int)point.x + 8, (int)point.y - 14, 12, color);
     }
 }
 
 
-void XYPlot_AutoRange(XYPlot plot, const float* x,
-    const float* y,
-    size_t count)
+void XYPlot_AutoRange(XYPlot plot, const float* x, const float* y, size_t count)
 {
     if (count == 0)
         return;
@@ -401,23 +359,14 @@ void XYPlot_AutoRange(XYPlot plot, const float* x,
 }
 
 
-void XYPlot_Draw(
-    const XYPlot plot,
-    const float* x,
-    const float* y,
-    size_t count,
-    Color color)
+void XYPlot_Draw( const XYPlot plot, const float* x, const float* y, size_t count, Color color)
 {
     if (count == 0)
         return;
 
-    Rectangle bounds =
-    {
-        plot->pos.x,
-        plot->pos.y - plot->height,
-        plot->width,
-        plot->height
-    };
+    Rectangle bounds = plot->Plot_space;
+
+    bounds.y = plot->Plot_space.y - plot->Plot_space.height;
 
     // Grid
     XYPlot_DrawGrid(plot);
