@@ -619,6 +619,104 @@ void Vector3SetByJoint(Vector3* v, RobotJointIndex joint, float value){
     }
 }
 
+void ROBOT_PRINT(const Robot self)
+{
+    assert(self);
+
+    printf("\n");
+    printf("============================================================\n");
+    printf("                       ROBOT STATE\n");
+    printf("============================================================\n");
+
+    printf("Mode          : %d\n", (int)self->mode);
+    printf("Previous Mode : %d\n", (int)self->previous_mode);
+
+    printf("\n---------------------- CURRENT STATE -----------------------\n");
+
+    /*
+     * Replace these member names with the actual members
+     * inside your RobotState struct.
+     */
+    printf("Current State:\n");
+    printf("  Joint Positions:\n");
+
+    for (int i = 0; i < ROBOT_NUM_JOINTS; i++)
+    {
+        printf("    J%d : %10.4f\n", i + 1, Vector3GetByJoint(self->current.joint_position, i));
+    }
+
+    printf("  Joint Velocities:\n");
+
+    for (int i = 0; i < ROBOT_NUM_JOINTS; i++)
+    {
+        printf("    J%d : %10.4f\n", i + 1, Vector3GetByJoint(self->current.joint_velocity, i));
+    }
+
+    printf("  TCP Positions:\n");
+
+    for (int i = 0; i < ROBOT_NUM_JOINTS; i++)
+    {
+        printf("          %10.4f\n", Vector3GetByJoint(self->current.tcp_position, i));
+    }
+
+    printf("  TCP Velocities: Not tracked yet\n");
+
+    for (int i = 0; i < ROBOT_NUM_JOINTS; i++)
+    {
+        printf("          %10.4f\n", Vector3GetByJoint(self->current.tcp_velocity, i));
+    }
+
+
+    printf("\n----------------------- TARGET STATE -----------------------\n");
+
+    printf("Target State:\n");
+    printf("  Joint Positions:\n");
+
+    for (int i = 0; i < ROBOT_NUM_JOINTS; i++)
+    {
+        printf("    J%d : %10.4f\n", i + 1, Vector3GetByJoint(self->target.joint_position, i));
+    }
+
+    printf("  Joint Velocities:\n");
+
+    for (int i = 0; i < ROBOT_NUM_JOINTS; i++)
+    {
+        printf("    J%d : %10.4f\n", i + 1, Vector3GetByJoint(self->target.joint_velocity, i));
+    }
+
+    printf("  TCP Positions:\n");
+
+    for (int i = 0; i < ROBOT_NUM_JOINTS; i++)
+    {
+        printf("          %10.4f\n", Vector3GetByJoint(self->target.tcp_position, i));
+    }
+
+    printf("  TCP Velocities: Not tracked yet\n");
+
+    for (int i = 0; i < ROBOT_NUM_JOINTS; i++)
+    {
+        printf("          %10.4f\n", Vector3GetByJoint(self->target.tcp_velocity, i));
+    }
+
+
+    printf("\n--------------------- POSITION LIMITS ----------------------\n");
+
+    for (int i = 0; i < ROBOT_NUM_JOINTS; i++)
+    {
+        printf("J%d : [%10.4f, %10.4f]\n", i + 1, self->joint_position_limits[i][0], self->joint_position_limits[i][1]);
+    }
+
+
+    printf("\n--------------------- VELOCITY LIMITS ----------------------\n");
+
+    for (int i = 0; i < ROBOT_NUM_JOINTS; i++)
+    {
+        printf("J%d : [%10.4f, %10.4f]\n", i + 1, self->joint_velocity_limits[i][0], self->joint_velocity_limits[i][1]);
+    }
+
+    printf("============================================================\n\n");
+}
+
 void ROBOT_Destroy(Robot self)
 {
     if (!self) {

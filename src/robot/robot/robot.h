@@ -174,6 +174,13 @@ extern void ROBOT_Draw(R self);
  */
 extern void ROBOT_HandleModeChange(R self);
 
+/**
+ * @brief 
+ * 
+ * @param self 
+ */
+extern void ROBOT_PRINT(R self);
+
 
 /** 
  * @brief Gets the value of a Vector3 component based on the joint index.
@@ -190,6 +197,8 @@ extern float Vector3GetByJoint(Vector3 v, RobotJointIndex joint);
  * @param value The value to set for the specified component.
  */
 extern void Vector3SetByJoint(Vector3* v, RobotJointIndex joint, float value);
+
+
 
 #undef R
 
