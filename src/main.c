@@ -115,7 +115,7 @@ Link link4 = NULL;
 
 static GuiSimPanel gui_sim_panel = NULL;
 
-static Rectangle Screen_layout = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT };
+static Rectangle Screen_layout = {0, 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT };
 
 // ---------------------------------------------------------
 // Functions
@@ -126,6 +126,7 @@ void IdleTasks(void);
 void UpdateDrawFrame(void);
 void UpdateTestPoseCycle(Robot robot, double now);
 void DrawWorldAxes3D(float length);
+void DrawWorldAxesLabels3D(float length, Camera3D camera);
 
 // ---------------------------------------------------------
 // Main
@@ -322,41 +323,6 @@ void Pos_Ctrl_Update(void){
 
 
 // ---------------------------------------------------------
-// Runs at 1 kHz
-// Put PID, control, simulation, path math, etc. here.
-// ---------------------------------------------------------
-void Control_Update(void)
-{
-    
-
-    float t = (float)GetTime();
-
-    float joint1Angle = cosf(t * 0.25f * PI) * 90.0f * DEG2RAD;
-    float joint2Angle = sinf(t * 0.25f * PI) * 90.0f * DEG2RAD;
-
-    // Positive distance downward
-    float joint3Slide =  (sinf(t * 0.5f * PI) -1) * 1.70/2;
-
-    float link1Heading = 0.0f;
-    float link2Heading = joint1Angle;
-    float link3Heading = joint1Angle + joint2Angle;
-    float link4Heading = joint1Angle + joint2Angle;
-
-    LINK_SetHeadingWorld(link1, link1Heading);
-    LINK_SetJointPosition(link1, 0.0f);
-
-    LINK_SetHeadingWorld(link2, link2Heading);
-    LINK_SetJointPosition(link2, joint1Angle);
-
-    LINK_SetHeadingWorld(link3, link3Heading);
-    LINK_SetJointPosition(link3, joint3Slide);
-
-    LINK_SetHeadingWorld(link4, link4Heading);
-    LINK_SetJointPosition(link4, 0.0f);
-
-}
-
-// ---------------------------------------------------------
 // Runs only when PID and render are not due
 // Put low-priority background work here.
 // ---------------------------------------------------------
@@ -384,62 +350,9 @@ void IdleTasks(void)
 
 void UpdateDrawFrame(void)
 {
-    static float phase = 0.0f;
-
-    float x[PLOT_POINTS];
-    float y[PLOT_POINTS];
-
-    size_t count = PLOT_POINTS;
-
-    // Generate sine wave
-    for (size_t i = 0; i < count; i++)
-    {
-        x[i] = ((float)i / (float)(count - 1)) * 2.0f * PI;
-
-        y[i] = sinf(x[i] + phase);
-    }
-
-    // Move phase from 0 -> 2PI
-    phase += 0.03f;
-
-    if (phase >= 2.0f * PI)
-        phase -= 2.0f * PI;
-
-
-    XYPlot plot = XYPlot_Create(
-        (Vector2){ 1550, 300 },
-        400,
-        250
-    );
-
-    XYPlot_SetRange(
-        plot,
-        0.0f,
-        2.0f * PI,
-        -1.5f,
-        1.5f
-    );
-
-    XYPlot_SetGrid(
-        plot,
-        PI / 2.0f,
-        0.5f,
-        5
-    );
-
-    XYPlot_SetLabels(
-        plot,
-        "Angle (rad)",
-        "Amplitude"
-    );
-
-
-    // Update camera
     UpdateCamera(&camera, CAMERA_ORBITAL);
 
-    // Update GUI
     GUI_SIM_PANEL_Update(gui_sim_panel, SCARA);
-
 
     BeginDrawing();
 
@@ -448,29 +361,18 @@ void UpdateDrawFrame(void)
         BeginMode3D(camera);
 
             DrawGrid(30, 2.5f);
+
             DrawWorldAxes3D(50.0f);
+
             ROBOT_Draw(SCARA);
 
         EndMode3D();
 
+        DrawWorldAxesLabels3D(50.0f, camera);
 
-        // Draw GUI
         GUI_SIM_PANEL_Draw(gui_sim_panel);
 
-        XYPlot_DrawPoint(plot, 2.5f, 0.75f, "Target", BLUE);
-
-
-        // Draw moving sine wave
-        XYPlot_Draw(
-            plot,
-            x,
-            y,
-            count,
-            RED
-        );
-
     EndDrawing();
-
 }
 
 void DrawWorldAxes3D(float length)
@@ -478,10 +380,16 @@ void DrawWorldAxes3D(float length)
     const float shaftRadius = 0.225f;
     const float headRadius  = 0.7f;
     const float headLength  = 2.20f;
+    const float labelStep   = 5.0f;
+    const float tickSize    = 0.35f;
 
     Vector3 origin = { 0.0f, 0.0f, 0.0f };
 
-    // X axis
+
+    // ============================================================
+    // X AXIS
+    // ============================================================
+
     DrawCylinderEx(
         origin,
         (Vector3){ length - headLength, 0.0f, 0.0f },
@@ -500,7 +408,11 @@ void DrawWorldAxes3D(float length)
         RED
     );
 
-    // Y axis
+
+    // ============================================================
+    // Y AXIS
+    // ============================================================
+
     DrawCylinderEx(
         origin,
         (Vector3){ 0.0f, length - headLength, 0.0f },
@@ -519,7 +431,11 @@ void DrawWorldAxes3D(float length)
         GREEN
     );
 
-    // Z axis
+
+    // ============================================================
+    // Z AXIS
+    // ============================================================
+
     DrawCylinderEx(
         origin,
         (Vector3){ 0.0f, 0.0f, length - headLength },
@@ -538,6 +454,165 @@ void DrawWorldAxes3D(float length)
         BLUE
     );
 
-    // Origin marker
-    DrawSphere(origin, 0.12f, BLACK);
+
+    // ============================================================
+    // TICKS
+    // ============================================================
+
+    for (float value = labelStep;
+         value < length - headLength;
+         value += labelStep)
+    {
+        /*
+         * X tick
+         */
+        DrawLine3D(
+            (Vector3){ value, -tickSize, 0.0f },
+            (Vector3){ value,  tickSize, 0.0f },
+            RED
+        );
+
+        /*
+         * Y tick
+         */
+        DrawLine3D(
+            (Vector3){ -tickSize, value, 0.0f },
+            (Vector3){  tickSize, value, 0.0f },
+            GREEN
+        );
+
+        /*
+         * Z tick
+         */
+        DrawLine3D(
+            (Vector3){ -tickSize, 0.0f, value },
+            (Vector3){  tickSize, 0.0f, value },
+            BLUE
+        );
+    }
+
+
+    // ============================================================
+    // ORIGIN
+    // ============================================================
+
+    DrawSphere(origin, 0.3f, BLACK);
+}
+
+void DrawWorldAxesLabels3D(float length, Camera3D camera)
+{
+    const float labelStep  = 5.0f;
+    const float headLength = 2.20f;
+
+    char text[16];
+
+
+    // ============================================================
+    // NUMERIC LABELS
+    // ============================================================
+
+    for (float value = labelStep;
+         value < length - headLength;
+         value += labelStep)
+    {
+        snprintf(text, sizeof(text), "%.0f", value);
+
+
+        // --------------------------------------------------------
+        // X
+        // --------------------------------------------------------
+
+        Vector2 xScreen = GetWorldToScreen(
+            (Vector3){ value, -0.8f, 0.0f },
+            camera
+        );
+
+        DrawText(
+            text,
+            (int)xScreen.x,
+            (int)xScreen.y,
+            16,
+            BLACK
+        );
+
+
+        // --------------------------------------------------------
+        // Y
+        // --------------------------------------------------------
+
+        Vector2 yScreen = GetWorldToScreen(
+            (Vector3){ -0.8f, value, 0.0f },
+            camera
+        );
+
+        DrawText(
+            text,
+            (int)yScreen.x,
+            (int)yScreen.y,
+            16,
+            BLACK
+        );
+
+
+        // --------------------------------------------------------
+        // Z
+        // --------------------------------------------------------
+
+        Vector2 zScreen = GetWorldToScreen(
+            (Vector3){ -0.8f, 0.0f, value },
+            camera
+        );
+
+        DrawText(
+            text,
+            (int)zScreen.x,
+            (int)zScreen.y,
+            16,
+            BLACK
+        );
+    }
+
+
+    // ============================================================
+    // AXIS NAMES
+    // ============================================================
+
+    Vector2 xLabel = GetWorldToScreen(
+        (Vector3){ length + 1.0f, 0.0f, 0.0f },
+        camera
+    );
+
+    Vector2 yLabel = GetWorldToScreen(
+        (Vector3){ 0.0f, length + 1.0f, 0.0f },
+        camera
+    );
+
+    Vector2 zLabel = GetWorldToScreen(
+        (Vector3){ 0.0f, 0.0f, length + 1.0f },
+        camera
+    );
+
+    DrawText(
+        "X",
+        (int)xLabel.x,
+        (int)xLabel.y,
+        20,
+        BLACK
+    );
+
+    DrawText(
+        "Y",
+        (int)yLabel.x,
+        (int)yLabel.y,
+        20,
+        BLACK
+    );
+
+    DrawText(
+        "Z",
+        (int)zLabel.x,
+        (int)zLabel.y,
+        20,
+        BLACK
+    );
 }
